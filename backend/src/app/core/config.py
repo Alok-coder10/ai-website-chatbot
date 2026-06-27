@@ -19,10 +19,13 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./assistant.db"
 
-    llm_provider: str = "ollama"
+    LLM_PROVIDER: str = "ollama"
 
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen3:8b"
+    OLLAMA_HOST: str = "http://localhost:11434"
+
+    OLLAMA_MODEL: str = "llama3.2:3b"
+
+    LLM_TIMEOUT: int = 120
 
     model_config = SettingsConfigDict(
         env_file=".env",
