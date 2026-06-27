@@ -24,6 +24,8 @@ dev = [
     "pre-commit",
     "pytest",
     "pytest-asyncio",
+    "pytest-cov>=7.1.0",
+    "pytest-httpx>=0.36.2",
     "ruff",
 ]
 
