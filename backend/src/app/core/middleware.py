@@ -4,9 +4,7 @@ from app.core.logging import logger
 
 async def log_requests(request: Request, call_next):
     start = time.perf_counter()
-
     response = await call_next(request)
-
     duration = time.perf_counter() - start
 
     logger.info(

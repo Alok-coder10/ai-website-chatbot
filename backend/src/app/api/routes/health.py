@@ -4,7 +4,6 @@ from app.schemas.response import ApiResponse
 
 router = APIRouter(tags=["Health"])
 
-
 @router.get(
     "/health",
     response_model=ApiResponse,

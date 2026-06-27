@@ -9,7 +9,6 @@ def setup_logging() -> None:
     """
 
     logger.remove()
-
     logger.add(
         sys.stdout,
         level=settings.log_level,

@@ -1,32 +1,22 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     app_name: str = "AI Website Assistant"
     app_version: str = "0.1.0"
-
     debug: bool = True
-
     log_level: str = "INFO"
-
     host: str = "0.0.0.0"
     port: int = 8000
-
     api_v1_prefix: str = "/api/v1"
-
     database_url: str = "sqlite:///./assistant.db"
-
     LLM_PROVIDER: str = "ollama"
-
     OLLAMA_HOST: str = "http://localhost:11434"
-
     OLLAMA_MODEL: str = "llama3.2:3b"
-
     LLM_TIMEOUT: int = 120
-
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
