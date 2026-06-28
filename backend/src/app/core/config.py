@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     api_v1_prefix: str = "/api/v1"
-    database_url: str = "sqlite:///./assistant.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./assistant.db"
     LLM_PROVIDER: str = "ollama"
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2:3b"
