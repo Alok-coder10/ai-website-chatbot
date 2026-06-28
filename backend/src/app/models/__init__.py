@@ -4,3 +4,6 @@ from app.models.conversation import (
 from app.models.message import (
     Message
 )
+from app.models.base import(
+    Base
+)

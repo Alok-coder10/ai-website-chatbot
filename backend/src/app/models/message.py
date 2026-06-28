@@ -8,10 +8,11 @@ from sqlalchemy.orm import(
     relationship,
 )
 from app.models.conversation import (
-    Base
+    Base,
+    TimestampMixin
 )
 
-class Message(Base):
+class Message(Base, TimestampMixin):
     __tablename__ = "messages"
 
     id: Mapped[int] = mapped_column(
@@ -19,6 +20,7 @@ class Message(Base):
     )
 
     role: Mapped[str]
+    
     content: Mapped[str] = mapped_column(
         Text
     )
