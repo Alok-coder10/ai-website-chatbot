@@ -62,3 +62,11 @@ class ConversationService:
             )
         )
         return result.scalars().all()
+
+    async def get_conversation(self, db, conversation_id: int):
+        result = await db.execute(
+            select(Conversation).where(
+                Conversation.id == conversation_id
+            )
+        )
+        return result.scalar_one_or_more()
