@@ -55,7 +55,7 @@ class ConversationService:
                 Conversation.id == conversation_id
             )
         )
-        return result.scalar_one_or_more()
+        return result.scalar_one_or_none()
 
     async def list_conversations(self, db):
         result = await db.execute(

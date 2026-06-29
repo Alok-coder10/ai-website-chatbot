@@ -67,7 +67,7 @@ async def delete_conversation(
 
 
 @router.get(
-    "/conversations/{conversation_id}/message",
+    "/conversations/{conversation_id}/messages",
     response_model = list[MessageResponse]
 )
 async def get_message(
