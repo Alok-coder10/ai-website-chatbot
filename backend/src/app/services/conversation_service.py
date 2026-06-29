@@ -10,18 +10,10 @@ class ConversationService:
         title: str = "New Chat"
     ) -> Conversation:
 
-        conversation = Conversation(
-            title=title
-        )
-
-        db.add(
-            conversation
-        )
-
+        conversation = Conversation(title=title)
+        db.add(conversation)
         await db.commit()
-        await db.refresh(
-            conversation
-        )
+        await db.refresh(conversation)
         return conversation
 
 
@@ -38,15 +30,9 @@ class ConversationService:
             content=content
         )
 
-        db.add(
-            message
-        )
-
+        db.add(message)
         await db.commit()
-        await db.refresh(
-            message
-        )
-
+        await db.refresh(message)
         return message
 
     async def get_messages(
@@ -70,3 +56,18 @@ class ConversationService:
             )
         )
         return result.scalar_one_or_more()
+
+    async def list_conversations(self, db):
+        result = await db.execute(
+            select(Conversation)
+        )
+        return result.scalars().all()
+
+    async def delete_conversation(self, db, conversation_id: int):
+        conversation = await self.get_conversation(db, conversation_id)
+        if not conversation:
+            return False
+        
+        await db.delete(conversation)
+        await db.commit()
+        return True
