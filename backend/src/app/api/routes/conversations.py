@@ -10,7 +10,8 @@ from app.services.conversation_service import (
 )
 from app.schemas.conversation import (
     ConversationCreate,
-    ConversationResponse
+    ConversationResponse,
+    MessageResponse
 )
 
 router = APIRouter()
@@ -18,7 +19,6 @@ service = ConversationService()
 
 
 @router.post("/conversations", response_model=ConversationResponse)
-
 async def create_conversation(
     data: ConversationCreate, 
     db: AsyncSession = Depends(get_db)
@@ -27,12 +27,13 @@ async def create_conversation(
     conversation = await service.create_conversation(db, data.title)
     return conversation
 
-@router.get("/conversations", response_model=list[ConversationResponse])
 
+@router.get("/conversations", response_model=list[ConversationResponse])
 async def list_conversations(
     db: AsyncSession = Depends(get_db)
 ):
     return await service.list_conversations(db)
+
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
@@ -63,3 +64,14 @@ async def delete_conversation(
         "message":
         "Conversation deleted"
     }
+
+
+@router.get(
+    "/conversations/{conversation_id}/message",
+    response_model = list[MessageResponse]
+)
+async def get_message(
+    conversation_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    return await service.get_messages(db, conversation_id)

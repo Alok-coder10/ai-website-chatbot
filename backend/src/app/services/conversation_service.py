@@ -37,14 +37,14 @@ class ConversationService:
 
     async def get_messages(
         self,
-        db: AsyncSession,
+        db,
         conversation_id: int
     ):
         result = await db.execute(
-            select(Message)
-            .where(
-                Message.conversation_id
-                == conversation_id
+            select(Message).where(
+                Message.conversation_id == conversation_id
+            ).order_by(
+                Message.created_at
             )
         )
         return result.scalars().all()
