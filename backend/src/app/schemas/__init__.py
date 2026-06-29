@@ -8,6 +8,6 @@ __all__ = [
 
 from app.schemas.conversation import(
     ConversationCreate,
-    conversationResponse,
+    ConversationResponse,
     MessageResponse
 )

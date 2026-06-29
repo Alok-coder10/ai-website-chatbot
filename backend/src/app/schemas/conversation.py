@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class ConversationCreate(BaseModel):
     title: str = "New chat"
 
-class conversationResponse(BaseModel):
+class ConversationResponse(BaseModel):
     id: int
     uuid: str
     title: str
