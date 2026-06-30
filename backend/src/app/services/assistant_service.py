@@ -1,6 +1,8 @@
 from app.llm.factory import get_llm_provider
 from app.services.conversation_service import ConversationService
 from app.services.summary_service import SummaryService
+from app.services.memory_service import MemoryService
+from app.embeddings.embedder import Embedder
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -10,6 +12,8 @@ class AssistantService:
         self.provider = get_llm_provider()
         self.conversation_service = ConversationService()
         self.summary_service = SummaryService()
+        self.memory_service = MemoryService()
+        self.embedder = Embedder()
 
     async def chat(self, db, message, conversation_id=None):
         if conversation_id is None:
@@ -25,6 +29,11 @@ class AssistantService:
             db, conversation_id, "user", message
         )
 
+        embedding = self.embedder.encode(message)
+        await self.memory_service.save_memory(
+            db, conversation_id, message, embedding
+        )
+
         messages = await self.conversation_service.get_messages(
             db, conversation_id
         )
@@ -32,6 +41,12 @@ class AssistantService:
         summary = await self.summary_service.get_summary(
             db, conversation_id
         )
+
+        memories = await self.memory_service.get_memories(db, conversation_id)
+
+        memory_text = ""
+        for m in memories[-5:]:
+            memory_text += (m.content + "\n")
 
         if summary:
             summary_text = summary.content
@@ -88,6 +103,9 @@ class AssistantService:
         Summary:
         {summary_text}
 
+        Relevent memories:
+        {memory_text}
+
         Recent conversation:
         {context}
 
@@ -96,8 +114,11 @@ class AssistantService:
 
 
         Answer naturally.
-        Use summary for long-term memory.
+        Use summary as long-term memory.
+        Use memories for personal facts.
         Use recent conversation for context.
+        Do not day "according to summary".
+        Respond conversationally.
         """
 
         response = await self.provider.generate(
