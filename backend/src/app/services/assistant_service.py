@@ -5,7 +5,7 @@ from app.services.conversation_service import ConversationService
 conversation_service = ConversationService()
 
 class AssistantService:
-
+    MAX_HISTORY = 10
     def __init__(self):
         self.provider = get_llm_provider()
         self.conversation_service = ConversationService()
@@ -22,17 +22,22 @@ class AssistantService:
         await self.conversation_service.save_message(
             db, conversation_id, "user", message
         )
-        messages = await conversation_service.get_messages(db, conversation_id)
+        messages = await self.conversation_service.get_messages(db, conversation_id)
+        messages = messages[-self.MAX_HISTORY:]
+
         context = ""
         for m in messages:
             context += f"{m.role}: {m.content}\n"
 
-        context += f"user: {message}" 
+        #context += f"user: {message}" 
         response = await self.provider.generate(
-            prompt = f"""Previous conversation:{context}
-                        Current message:{message}
-                        Answer using the previous conversation.
-                        """
+            prompt = f"""
+            Previous conversation:
+            {context}
+            Current message:
+            {message}
+            Answer using the previous conversation.
+            """
         )
 
         await self.conversation_service.save_message(
