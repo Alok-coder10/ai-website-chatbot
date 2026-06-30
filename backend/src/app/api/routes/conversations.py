@@ -1,3 +1,4 @@
+from app.services import summary_service
 from fastapi import(
     APIRouter,
     Depends,
@@ -13,10 +14,12 @@ from app.schemas.conversation import (
     ConversationResponse,
     MessageResponse
 )
+from app.services.summary_service import SummaryService
+from app.schemas.summary import SummaryResponse
 
 router = APIRouter()
 service = ConversationService()
-
+summary_service = SummaryService()
 
 @router.post("/conversations", response_model=ConversationResponse)
 async def create_conversation(
@@ -75,3 +78,23 @@ async def get_message(
     db: AsyncSession = Depends(get_db)
 ):
     return await service.get_messages(db, conversation_id)
+
+
+@router.get(
+    "/conversations/{conversation_id}/summary",
+    response_model=SummaryResponse
+)
+async def get_summary(
+    conversation_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    summary = await summary_service.get_summary(
+        db,
+        conversation_id
+    )
+    if summary is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Summary not found"
+        )
+    return summary

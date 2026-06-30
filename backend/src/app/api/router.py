@@ -10,7 +10,11 @@ api_router.include_router(health_router, tags=["Health"])
 api_router.include_router(chat_router, tags=["Chat"])
 
 api_router.include_router(
+    conversations.router, 
+    tags=["Conversations"]
+)
+
+api_router.include_router(
     conversations.router,
-    
     tags=["Conversations"]
 )

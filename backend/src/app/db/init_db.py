@@ -1,15 +1,7 @@
-# from app.db.database import engine
-# from app.models.conversation import Base
-
-# async def init_db():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(
-#             Base.metadata.create_all
-#         )
-
 import asyncio
 from app.db.database import engine
 from app.models.conversation import Base
+from app.models.summary import Summary
 
 async def init_db():
     async with engine.begin() as conn:
