@@ -1,4 +1,6 @@
-from backend.src.app.services import document_service
+from app.services import document_service, retrieval_service
+from app.services import document_db_service
+from app.services import chunk_db_service
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -13,23 +15,25 @@ from app.services.document_db_service import DocumentDBService
 from app.services.chunk_service import ChunkService
 from app.services.chunk_db_service import ChunkDBService
 from app.embeddings.embedder import Embedder
+from app.services.retrieval_service import RetrievalService
 
 router = APIRouter()
-service = DocumentService()
-document_db = DocumentDBService()
+document_service = DocumentService()
+document_db_service = DocumentDBService()
 chunk_service = ChunkService()
-chunk_db = ChunkDBService()
+chunk_db_service = ChunkDBService()
 embedder = Embedder()
+retrieval_service = RetrievalService()
 
 @router.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db)
 ):
-    path = await service.save_file(file)
+    path = await document_service.save_file(file)
     ext = Path(file.filename).suffix
 
-    doc = await document_db.create(db, file.filename, ext)
+    doc = await document_db_service.create(db, file.filename, ext)
 
     if ext == ".pdf":
         text = document_service.extract_pdf(path)
@@ -42,10 +46,10 @@ async def upload_document(
     
     for c in chunks:
         embedding = embedder.encode(c)
-        await chunk_db.save(
+        await chunk_db_service.save(
             db, doc.id, c, embedding
         )
-        
+
 
     return {
         "id": doc.id,
@@ -58,4 +62,17 @@ async def upload_document(
 async def list_documents(
     db: AsyncSession = Depends(get_db)
 ):
-    return await document_db.list_documents(db)
+    return await document_db_service.list_documents(db)
+
+
+
+@router.post(f"/documents/{id}/search")
+async def search(
+    document_id: int,
+    query: str,
+    db: AsyncSession = Depends(get_db)
+):
+    emb = embedder.encode(query)
+    chunks = await retrieval_service.retrieve(db, document_id, emb)
+
+    return [c.content for c in chunks]

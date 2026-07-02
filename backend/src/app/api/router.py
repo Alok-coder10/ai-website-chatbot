@@ -16,10 +16,6 @@ api_router.include_router(
 )
 
 api_router.include_router(
-    conversations.router,
-    tags=["Conversations"]
-)
-
-api_router.include_router(
-    document_router
+    document_router,
+    tags=["RAG Services"]
 )

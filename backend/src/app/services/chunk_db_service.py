@@ -9,7 +9,7 @@ class ChunkDBService:
         chunk = Chunk(
             document_id = document_id,
             content = content,
-            embeddings = json.dumps(embedding)
+            embedding = json.dumps(embedding)
         )
 
         db.add(chunk)
@@ -21,8 +21,8 @@ class ChunkDBService:
     
     async def get_chunks(self, db, document_id):
         result = await db.execute(
-            select(chunk).where(
-                chunk.document_id == document_id
+            select(Chunk).where(
+                Chunk.document_id == document_id
             )
         )
 
