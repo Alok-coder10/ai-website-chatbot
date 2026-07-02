@@ -1,6 +1,7 @@
 from app.services import document_service, retrieval_service
 from app.services import document_db_service
 from app.services import chunk_db_service
+from backend.src.app.schemas import document
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -44,10 +45,15 @@ async def upload_document(
 
     chunks = chunk_service.split(text)
     
-    for c in chunks:
+    for i, c in enumerate(chunks):
         embedding = embedder.encode(c)
         await chunk_db_service.save(
-            db, doc.id, c, embedding
+            db = db,
+            document_id= document.id,
+            source_name = document.filename,
+            chunk_index = i,
+            content = c, 
+            embedding = embedding
         )
 
 

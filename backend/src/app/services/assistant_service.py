@@ -124,12 +124,20 @@ class AssistantService:
 
 ######################################################################
         query_embedding = (self.embedder.encode(message))
-        
+
         retrieved_chunks = await self.retrieval.search(
             db, query_embedding, top_k = 3
         )
 
         rag_context = ""
+        citations = []
+        for c in retrieved_chunks:
+            rag_context += c.content
+            rag_context += "\n\n"
+            citations.append(
+                f"{c.source_name}"
+                f"(chunk {c.chunk_index})"
+            )
         if retrieved_chunks:
             rag_context = "\n".join(
                 c.content for c in retrieved_chunks
@@ -166,8 +174,11 @@ class AssistantService:
         Relevant memories
         {memory_text}
 
-        Retrieved knowledge:
+        Retrieved documents:
         {rag_context}
+
+        Sources:
+        {citations}
 
         Recent conversation
         {context}
@@ -176,7 +187,13 @@ class AssistantService:
         {message}
 
         Instructions:
-        Use retrieved knowledge whenever relevant.
+        Use retrieved documents.
+        Cite sources when answering.
+        Format:
+        [Source: filename chunk N]
+
+        Do not invent citations.
+        only cite retrieved chunks.
         Prefer retrieved knowledge over assumptions.
         Use memories naturally.
         Use summary as old context.
@@ -193,6 +210,13 @@ class AssistantService:
                 prompt = prompt
             )
         )
+
+        citation_text = ""
+        if citations:
+            citation_text = "\n\nSources:\n"
+            citation_text += "\n".join(set(citations))
+        
+        response += citation_text
 
         await self.conversation_service.save_message(
             db, conversation_id, "assistant", response
