@@ -31,4 +31,4 @@ class DocumentService:
     
     def extract_text(self, path):
         with open(path, encoding="utf-8") as file:
-            return f.read()
+            return file.read()
