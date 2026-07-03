@@ -29,3 +29,9 @@ class ChunkDBService:
         )
 
         return result.scalars().all()
+
+    async def get_all_chunks(self, db):
+        result = await db.execute(
+            select (Chunk)
+        )
+        return result.scalars().all()

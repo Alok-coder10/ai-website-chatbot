@@ -1,7 +1,3 @@
-from app.services import document_service, retrieval_service
-from app.services import document_db_service
-from app.services import chunk_db_service
-from backend.src.app.schemas import document
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -10,7 +6,9 @@ from fastapi import (
 )
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.session import get_db
+
 from app.services.document_service import DocumentService
 from app.services.document_db_service import DocumentDBService
 from app.services.chunk_service import ChunkService
@@ -49,8 +47,8 @@ async def upload_document(
         embedding = embedder.encode(c)
         await chunk_db_service.save(
             db = db,
-            document_id= document.id,
-            source_name = document.filename,
+            document_id= doc.id,
+            source_name = doc.filename,
             chunk_index = i,
             content = c, 
             embedding = embedding
@@ -64,7 +62,7 @@ async def upload_document(
     }
 
 
-@router.get("/documetns")
+@router.get("/documents")
 async def list_documents(
     db: AsyncSession = Depends(get_db)
 ):
@@ -72,7 +70,7 @@ async def list_documents(
 
 
 
-@router.post(f"/documents/{id}/search")
+@router.post("/documents/{document_id}/search")
 async def search(
     document_id: int,
     query: str,

@@ -125,8 +125,10 @@ class AssistantService:
 ######################################################################
         query_embedding = (self.embedder.encode(message))
 
-        retrieved_chunks = await self.retrieval.search(
-            db, query_embedding, top_k = 3
+        retrieved_chunks = (
+            await self.retrieval.hybrid_search(
+                db, query=message, query_embedding=query_embedding, top_k=3
+            )
         )
 
         rag_context = ""

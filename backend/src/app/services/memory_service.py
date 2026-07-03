@@ -24,7 +24,7 @@ class MemoryService:
 
         db.add(memory)
         await db.commit()
-        await db.refreash(memory)
+        await db.refresh(memory)
         return memory
 
 
