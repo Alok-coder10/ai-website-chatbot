@@ -1,6 +1,6 @@
 class ChunkService:
-    CHUNK_SIZE = 500
-    OVERLAP = 100
+    CHUNK_SIZE = 700
+    OVERLAP = 150
 
     def split(self, text):
         chunks = []

@@ -4,6 +4,7 @@ from app.services.summary_service import SummaryService
 from app.services.memory_service import MemoryService
 from app.embeddings.embedder import Embedder
 from app.services.retrieval_service import  RetrievalService
+from app.reranker.reranker import Reranker
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -15,6 +16,7 @@ class AssistantService:
         self.memory_service = MemoryService()
         self.embedder = Embedder()
         self.retrieval = RetrievalService()
+        self.reranker = Reranker()
     
 
     async def chat(self, db, message, conversation_id = None):
@@ -127,15 +129,24 @@ class AssistantService:
 
         retrieved_chunks = (
             await self.retrieval.hybrid_search(
-                db, query=message, query_embedding=query_embedding, top_k=3
+                db, query=message, query_embedding=query_embedding, top_k=15
             )
+        )
+        reranked = self.reranker.rerank(
+            message, retrieved_chunks, top_k=3
         )
 
         rag_context = ""
         citations = []
-        for c in retrieved_chunks:
-            rag_context += c.content
-            rag_context += "\n\n"
+        for c in reranked:
+            rag_context += (
+                f"Source: "
+                f"{c.source_name}"
+                f"(chunk"
+                f"{c.chunk_index})\n"
+                f"{c.content}\n\n"
+            )
+
             citations.append(
                 f"{c.source_name}"
                 f"(chunk {c.chunk_index})"

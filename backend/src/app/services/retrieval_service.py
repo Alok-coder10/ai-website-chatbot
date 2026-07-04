@@ -10,7 +10,7 @@ class RetrievalService:
 
     
     async def hybrid_search(
-        self, db, query, query_embedding, top_k = 3
+        self, db, query, query_embedding, top_k = 8
     ):
         chunks = await self.chunk_db_service.get_all_chunks(db)
         semantic = []
@@ -52,7 +52,7 @@ class RetrievalService:
         return dot/(norm_a * norm_b)
 
     async def retrieve(
-        self, db, document_id, query_embedding, top_k = 3
+        self, db, document_id, query_embedding, top_k = 8
     ):
         if document_id:
             chunks = await self.chunk_db_service.get_chunks(db, document_id)
