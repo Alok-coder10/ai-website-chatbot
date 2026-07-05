@@ -35,3 +35,16 @@ class ChunkDBService:
             select (Chunk)
         )
         return result.scalars().all()
+
+    
+
+    async def get_chunks_by_document_ids(
+        self, db, ids
+    ):
+        result = await db.execute(
+            select(Chunk).where(
+                Chunk.document_id.in_(ids)
+            )
+        )
+
+        return result.scalars().all()

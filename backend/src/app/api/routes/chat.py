@@ -22,7 +22,9 @@ async def chat(
     request: ChatRequest,
     db: AsyncSession = Depends(get_db)    
 ):
-    result = await assistant.chat(db, request.message, request.conversation_id)
+    result = await assistant.chat(
+        db, request.message, request.conversation_id, request.category, request.owner
+    )
     return ChatResponse(
         conversation_id = result["conversation_id"],
         response = result["response"]

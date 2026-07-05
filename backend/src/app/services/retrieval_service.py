@@ -2,21 +2,71 @@ import json
 import math
 from app.services.chunk_db_service import ChunkDBService
 from app.services.bm25_service import BM25Service
+from app.services.document_db_service import DocumentDBService
+from app.models import document
 
 class RetrievalService:
     def __init__(self):
         self.chunk_db_service = ChunkDBService()
         self.bm25_service = BM25Service()
+        self.document_db_service = DocumentDBService()
 
     
     async def hybrid_search(
-        self, db, query, query_embedding, top_k = 8
+        self, db, query, query_embedding,
+        category = None, owner = None,  top_k = 8
     ):
-        chunks = await self.chunk_db_service.get_all_chunks(db)
+
+        documents = await (
+            self.document_db_service.filter_documents(
+                db, category, owner
+            )
+        )
+
+        #debugging
+
+        print("FILTERED DOCS")
+        for d in documents:
+            print(d.id, d.filename, d.category, d.owner)
+
+
+        if category or owner:
+            ids = [d.id for d in documents]
+
+            #debuging
+            print(ids)
+            
+
+            if ids:
+                chunks = await (
+                    self.chunk_db_service.get_chunks_by_document_ids(db, ids)
+                )
+            
+            else:
+                chunks = []
+
+
+            #debugging
+            print("CHUNK count", len(chunks))
+
+            for c in chunks:
+                print(
+                    c.document_id,
+                    c.source_name
+                )
+
+
+
+
+        else:
+            chunks = await (
+                self.chunk_db_service.get_all_chunks(db)
+            )
+            
         semantic = []
         keyword = []
         if chunks:
-            semantic = await self.retrieve(db, None, query_embedding, top_k)
+            semantic = await self.retrieve(chunks , query_embedding, top_k) 
             keyword = (
                 self.bm25_service.search(query, chunks, top_k) or []
             )
@@ -28,9 +78,15 @@ class RetrievalService:
         for c in keyword:
             results[c.id] = c
 
-        combined = list(results.values())
+        combined = semantic + keyword
+        seen = {}
 
-        return combined[:top_k]
+        for c in combined:
+            seen[c.id] = c
+        
+        combined = list(seen.values())
+
+        return combined
 
 
     def cosine_similarity(self, a, b):
@@ -52,14 +108,8 @@ class RetrievalService:
         return dot/(norm_a * norm_b)
 
     async def retrieve(
-        self, db, document_id, query_embedding, top_k = 8
-    ):
-        if document_id:
-            chunks = await self.chunk_db_service.get_chunks(db, document_id)
-        
-        else:
-            chunks = await self.chunk_db_service.get_all_chunks(db)
-        
+        self, chunks, query_embedding, top_k = 8
+    ):   
         scored = []
         for c in chunks:
             emb = json.loads(c.embedding)

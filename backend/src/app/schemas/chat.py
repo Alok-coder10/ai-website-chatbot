@@ -6,6 +6,8 @@ class ChatRequest(BaseModel):
     """
     message: str
     conversation_id: int | None = None
+    category: str | None = None
+    owner: str | None = None
 
     @field_validator("message")
     @classmethod

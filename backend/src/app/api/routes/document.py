@@ -27,12 +27,18 @@ retrieval_service = RetrievalService()
 @router.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
+    category: str | None = None,
+    owner: str | None = None,
+    tags: str | None = None,
     db: AsyncSession = Depends(get_db)
 ):
     path = await document_service.save_file(file)
     ext = Path(file.filename).suffix
 
-    doc = await document_db_service.create(db, file.filename, ext)
+    doc = await document_db_service.create(
+        db, file.filename, ext,
+        category, owner, tags
+    )
 
     if ext == ".pdf":
         text = document_service.extract_pdf(path)
