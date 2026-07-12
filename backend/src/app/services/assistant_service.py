@@ -5,6 +5,7 @@ from app.services.memory_service import MemoryService
 from app.embeddings.embedder import Embedder
 from app.services.retrieval_service import  RetrievalService
 from app.reranker.reranker import Reranker
+from app.services.query_expansion_service import QueryExpansionService
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -17,6 +18,7 @@ class AssistantService:
         self.embedder = Embedder()
         self.retrieval = RetrievalService()
         self.reranker = Reranker()
+        self.query_expansion = QueryExpansionService()
     
 
     async def chat(self, db, message, conversation_id = None, category = None, owner = None):
@@ -125,15 +127,16 @@ class AssistantService:
             summary_text = compressed
 
 ######################################################################
-        query_embedding = (self.embedder.encode(message))
 
-        #debugging
-        print("Category = ", category)
-        print("Owner = ", owner)
+        expanded_query = await self.query_expansion.expand(message)
+        print("Original :", message)
+        print("Expanded :", expanded_query)
+        query_embedding = (self.embedder.encode(message))
+        
 
         retrieved_chunks = (
             await self.retrieval.hybrid_search(
-                db, query=message, query_embedding=query_embedding, 
+                db, query=expanded_query, query_embedding=query_embedding, 
                 category = category, owner = owner, top_k=15
             )
         )
@@ -248,6 +251,7 @@ class AssistantService:
         await self.conversation_service.save_message(
             db, conversation_id, "assistant", response
         )
+
 
         return {
             "conversation_id": conversation_id,

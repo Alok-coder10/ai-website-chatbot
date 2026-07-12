@@ -49,7 +49,7 @@ class RetrievalService:
         semantic = await self.retrieve(
             db=db,
             query_embedding=query_embedding,
-            top_k=top_k,
+            top_k=20,
             where=where
         )
 
@@ -60,7 +60,7 @@ class RetrievalService:
             self.bm25_service.search(
                 query,
                 semantic,
-                top_k
+                top_k = 20
             )
             if semantic
             else []
@@ -78,83 +78,6 @@ class RetrievalService:
 
         return list(unique.values())[:top_k]
  
-
-        # documents = await (
-        #     self.document_db_service.filter_documents(
-        #         db, category, owner
-        #     )
-        # )
-
-        # #debugging
-
-        # # print("FILTERED DOCS")
-        # # for d in documents:
-        # #     print(d.id, d.filename, d.category, d.owner)
-
-
-        # if category or owner:
-        #     ids = [d.id for d in documents]
-
-        #     # #debuging
-        #     # print(ids)
-            
-        #     # for c in chunks:
-        #     #     print(
-        #     #         c.document_id,
-        #     #         c.source_name
-        #     #     )
-
-
-
-
-        # else:
-        #     chunks = await (
-        #         self.chunk_db_service.get_all_chunks(db)
-        #     )
-            
-        # where = None
-        # if category:
-        #     where = {"category": category}
-
-        # if owner:
-        #     where = {"owner": owner}
-
-        # if category and owner:
-        #     where = {
-        #         "$and": [
-        #             {"category": category},
-        #             {"owner": owner}
-        #         ]
-        #     }
-        # keyword = []
-        # semantic = await self.retrieve(
-        #     db = db ,
-        #     query_embedding = query_embedding,
-        #     top_k = top_k, 
-        #     where = where
-        # ) 
-        
-        # if chunks:
-        #     keyword = (
-        #         self.bm25_service.search(query, chunks, top_k) or []
-        #     )
-
-        # results = {}
-        # for c in semantic:
-        #     results[c.id] = c
-        
-        # for c in keyword:
-        #     results[c.id] = c
-
-        # combined = semantic + keyword
-        # seen = {}
-
-        # for c in combined:
-        #     seen[c.id] = c
-        
-        # combined = list(seen.values())
-
-        # return combined
 
 
     def cosine_similarity(self, a, b):
@@ -178,7 +101,7 @@ class RetrievalService:
 
 
     async def retrieve(
-        self, db, query_embedding, top_k = 8, where = None
+        self, db, query_embedding, top_k = 20, where = None
     ):   
         
         ids = self.chroma_service.search(
