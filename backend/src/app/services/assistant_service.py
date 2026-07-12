@@ -202,12 +202,15 @@ class AssistantService:
         {message}
 
         Instructions:
-        Answer ONLY from retrieved documents.
+        Answer ONLY using the retrieved documents.
         Cite sources when answering.
         Format:
         [Source: filename chunk N]
 
         Do not invent citations.
+        Do not use your own knowledge.
+        Do not guess.
+        Do not make assumptions.
         only cite retrieved chunks.
         Prefer retrieved knowledge over assumptions.
         Use memories naturally.

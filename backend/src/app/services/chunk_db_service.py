@@ -1,3 +1,4 @@
+from calendar import c
 import json
 from sqlalchemy import select
 from app.models.chunk import Chunk
@@ -48,3 +49,28 @@ class ChunkDBService:
         )
 
         return result.scalars().all()
+
+    
+    async def get_chunks_by_ids(
+        self, db, ids
+    ):
+        if not ids:
+            return []
+
+        ids = [int(i) for i in ids]
+
+        result = await db.execute(
+            select(Chunk).where(
+                Chunk.id.in_(ids)
+            )
+        )
+        chunks = result.scalars().all()
+
+        chunk_map = {
+            c.id : c for c in chunks
+        }
+
+        return [
+            chunk_map[i] for i in ids
+            if i in chunk_map
+        ]

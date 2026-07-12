@@ -1,3 +1,4 @@
+
 from fastapi import (
     APIRouter,
     UploadFile,
@@ -15,6 +16,7 @@ from app.services.chunk_service import ChunkService
 from app.services.chunk_db_service import ChunkDBService
 from app.embeddings.embedder import Embedder
 from app.services.retrieval_service import RetrievalService
+from app.vectordb.chroma_service import ChromaService
 
 router = APIRouter()
 document_service = DocumentService()
@@ -23,6 +25,7 @@ chunk_service = ChunkService()
 chunk_db_service = ChunkDBService()
 embedder = Embedder()
 retrieval_service = RetrievalService()
+chroma_service = ChromaService()
 
 @router.post("/documents/upload")
 async def upload_document(
@@ -51,7 +54,7 @@ async def upload_document(
     
     for i, c in enumerate(chunks):
         embedding = embedder.encode(c)
-        await chunk_db_service.save(
+        chunk = await chunk_db_service.save(
             db = db,
             document_id= doc.id,
             source_name = doc.filename,
@@ -60,7 +63,20 @@ async def upload_document(
             embedding = embedding
         )
 
+        chroma_service.add_chunks(
+            chunk_id= chunk.id,
+            embedding= embedding,
+            document = c,
+            metadata={
+                "document_id": doc.id,
+                "filename": doc.filename,
+                "category": category or "",
+                "owner": owner or "",
+                "chunk_index": i
+            }
+        )
 
+    # print(chroma_service.count())
     return {
         "id": doc.id,
         "filename": doc.filename,
