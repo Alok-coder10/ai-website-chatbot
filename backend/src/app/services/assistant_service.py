@@ -6,6 +6,8 @@ from app.embeddings.embedder import Embedder
 from app.services.retrieval_service import  RetrievalService
 from app.reranker.reranker import Reranker
 from app.services.query_expansion_service import QueryExpansionService
+from app.services.self_rag_service import SelfRAGService
+from app.services.query_rewrite_service import QueryRewriteService
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -19,6 +21,8 @@ class AssistantService:
         self.retrieval = RetrievalService()
         self.reranker = Reranker()
         self.query_expansion = QueryExpansionService()
+        self.self_rag_service = SelfRAGService()
+        self.query_rewrite = QueryRewriteService()
     
 
     async def chat(self, db, message, conversation_id = None, category = None, owner = None):
@@ -131,35 +135,45 @@ class AssistantService:
         expanded_query = await self.query_expansion.expand(message)
         print("Original :", message)
         print("Expanded :", expanded_query)
-        query_embedding = (self.embedder.encode(message))
+        query_embedding = self.embedder.encode(expanded_query)
         
-
-        retrieved_chunks = (
-            await self.retrieval.hybrid_search(
-                db, query=expanded_query, query_embedding=query_embedding, 
-                category = category, owner = owner, top_k=15
-            )
+        rag_context, citations = await self.retrieve_context(
+            db = db,
+            query = expanded_query,
+            embedding= query_embedding,
+            category = category,
+            owner=owner
         )
-        reranked = self.reranker.rerank(
-            message, retrieved_chunks, top_k=3
-        )
-
-        rag_context = ""
-        citations = []
-        for c in reranked:
-            rag_context += (
-                f"Source: "
-                f"{c.source_name}"
-                f"(chunk"
-                f"{c.chunk_index})\n"
-                f"{c.content}\n\n"
-            )
-            citations.append(
-                    f"{c.source_name}"
-                    f"(chunk {c.chunk_index})"
-            )
-
+        decision = await self.self_rag_service.evaluate(message, rag_context)
+        print("SELF RAG:", decision)
         
+        if decision == "NO":
+            new_query = await self.query_rewrite.rewrite(message)
+            new_embedding = self.embedder.encode(new_query)
+            print("Retry Query:", new_query)
+
+            rag_context, citations = await self.retrieve_context(
+                db = db,
+                query = new_query,
+                embedding= new_embedding,
+                category = category,
+                owner=owner
+            )
+
+            decision = await self.self_rag_service.evaluate(message, rag_context)
+            print("SELF RAG Retry:", decision)
+            if decision == "NO":
+                response = "I could not find this information in the retrieved documents."
+                
+                await self.conversation_service.save_message(
+                    db, conversation_id, "assistant", response
+                )
+                return {
+                    "conversation_id": conversation_id,
+                    "response": response
+                }
+            
+            
         
 ####################################################################
         
@@ -241,8 +255,8 @@ class AssistantService:
             citation_text += "\n".join(set(citations))
 
         found_answer = (
-            "I could not find not in response"
-            and "couldn't find" not in response
+            "I could not find" not in response
+            and "couldn't find" not in response.lower()
         )
         
         if citations and found_answer:
@@ -258,3 +272,34 @@ class AssistantService:
             "response": response
         }
 
+    
+    async def retrieve_context(
+        self, db, query, embedding, category = None, owner = None
+    ):
+        retrieved_chunks = await self.retrieval.hybrid_search(
+            db = db,
+            query = query,
+            query_embedding=embedding, 
+            category = category,
+            owner = owner,
+            top_k = 15
+        )
+
+        reranked = self.reranker.rerank(
+            query, retrieved_chunks, top_k=3
+        )
+
+        rag_context = ""
+        citations = ""
+
+        for c in reranked:
+            rag_context += (
+                f"Source: {c.source_name}"
+                f"(chunk {c.chunk_index})\n"
+                f"{c.content}\n\n"
+            )
+            citations.append(
+                f"{c.source_name}(chunk {c.chunk_index})"
+            )
+        
+        return rag_context, citations
