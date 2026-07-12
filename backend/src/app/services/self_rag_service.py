@@ -1,10 +1,11 @@
 from app.llm.factory import get_llm_provider
-
+from app.cache.prompt_cache import get_prompt_cache
 
 class SelfRAGService:
 
     def __init__(self):
         self.provider = get_llm_provider()
+        self.prompt_cache = get_prompt_cache()
 
     async def evaluate(self, question: str, context: str) -> str:
 
@@ -23,13 +24,35 @@ class SelfRAGService:
         Return ONLY the copied sentence or NONE.
         """
 
-        evidence = await self.provider.generate(
-            prompt=prompt
-        )
-        
-        if evidence.strip() == "NONE":
-            decision = "NO"
-        else:
-            decision = "YES"
+        cached = self.prompt_cache.get(prompt)
 
-        return decision
+        if cached is not None:
+            print("SelfRAG Prompt Cache HIT")
+            evidence = cached
+        
+        else:
+            print("SelfRAG Propmt Cache MISS")
+            evidence = await self.provider.generate(
+                prompt=prompt
+            )
+            evidence = evidence.strip()
+
+            self.prompt_cache.set(prompt, evidence)
+
+        
+        if evidence == "NONE":
+            return "NO"
+        else:
+            return "YES"
+
+
+
+_selfrag = None
+
+def get_self_rag_service():
+    global _selfrag
+
+    if _selfrag is None:
+        _selfrag = SelfRAGService()
+
+    return _selfrag

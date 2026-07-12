@@ -4,6 +4,15 @@ class LLMProvider(ABC):
     @abstractmethod
     async def generate(self, prompt: str) -> str:
         """
-        Generate a response
+        Generate the complete response
+        """
+        pass
+
+    
+    @abstractmethod
+    async def stram_generate(self, prompt:str):
+        """
+        Async generator.
+        Yields small text chunks.
         """
         pass

@@ -1,13 +1,15 @@
+from locale import normalize
 from app.llm.factory import get_llm_provider
 from app.services.conversation_service import ConversationService
 from app.services.summary_service import SummaryService
 from app.services.memory_service import MemoryService
-from app.embeddings.embedder import Embedder
-from app.services.retrieval_service import  RetrievalService
-from app.reranker.reranker import Reranker
-from app.services.query_expansion_service import QueryExpansionService
-from app.services.self_rag_service import SelfRAGService
-from app.services.query_rewrite_service import QueryRewriteService
+from app.embeddings.embedder import get_embedder
+from app.services.retrieval_service import  get_retrieval_service
+from app.reranker import get_reranker
+from app.services.query_expansion_service import get_query_expansion_service
+from app.services.self_rag_service import get_self_rag_service
+from app.services.query_rewrite_service import get_query_rewrite_service
+from app.cache.response_cache import get_response_cache
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -17,12 +19,13 @@ class AssistantService:
         self.conversation_service = ConversationService()
         self.summary_service = SummaryService()
         self.memory_service = MemoryService()
-        self.embedder = Embedder()
-        self.retrieval = RetrievalService()
-        self.reranker = Reranker()
-        self.query_expansion = QueryExpansionService()
-        self.self_rag_service = SelfRAGService()
-        self.query_rewrite = QueryRewriteService()
+        self.embedder = get_embedder()
+        self.retrieval = get_retrieval_service()
+        self.reranker = get_reranker()
+        self.query_expansion = get_query_expansion_service()
+        self.self_rag_service = get_self_rag_service()
+        self.query_rewrite = get_query_rewrite_service()
+        self.response_cache = get_response_cache()
     
 
     async def chat(self, db, message, conversation_id = None, category = None, owner = None):
@@ -54,16 +57,26 @@ class AssistantService:
         projects
         goals
         interests
-        Return ONLY the facts.
+        Return ONLY the facts or NONE.
         Return NONE if nothing important exists.
+        Never explain.
+        Never apologize.
+        Never output sentences.
         Message:
         {message}
         """
         fact = await self.provider.generate(
             prompt= memory_prompt
         )
+        fact = fact.strip()
 
-        if fact.strip().upper() != "NONE":
+        if fact.upper() == "NONE":
+            pass
+        elif "don't have" in fact.lower():
+            pass
+        elif len(fact.split()) > 20:
+            pass
+        else:
             embedding = self.embedder.encode(fact)
             await self.memory_service.save_memory(
                 db, conversation_id, fact, embedding
@@ -132,10 +145,33 @@ class AssistantService:
 
 ######################################################################
 
+
+        rcache_key = (
+            f"{category}|"
+            f"{owner}|"
+            f"{message.strip().lower()}"
+        )
+        rcached = self.response_cache.get(rcache_key)
+
+        if rcached is not None:
+            print("Response Cache HIT")
+
+            await self.conversation_service.save_message(
+                db, conversation_id, "assistant", rcached
+            )
+
+            return {
+                "conversation_id": conversation_id,
+                "response": rcached
+            }
+        
+        print("Response Cache MISS")
+
+
         expanded_query = await self.query_expansion.expand(message)
         print("Original :", message)
         print("Expanded :", expanded_query)
-        query_embedding = self.embedder.encode(expanded_query)
+        query_embedding = self.embedder.encode(message)
         
         rag_context, citations = await self.retrieve_context(
             db = db,
@@ -266,6 +302,10 @@ class AssistantService:
             db, conversation_id, "assistant", response
         )
 
+        self.response_cache.set(
+            rcache_key, response
+        )
+
 
         return {
             "conversation_id": conversation_id,
@@ -285,12 +325,18 @@ class AssistantService:
             top_k = 15
         )
 
-        reranked = self.reranker.rerank(
-            query, retrieved_chunks, top_k=3
-        )
+        if len(retrieved_chunks) <= 5:
+            print("Skipping reranker")
+            reranked = retrieved_chunks[:3]
+        
+        else:
+            print("Running reranker")
+            reranked = self.reranker.rerank(
+                query, retrieved_chunks, top_k=3
+            )
 
         rag_context = ""
-        citations = ""
+        citations = []
 
         for c in reranked:
             rag_context += (

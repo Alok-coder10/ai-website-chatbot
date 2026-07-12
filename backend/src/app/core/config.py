@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2:3b"
     LLM_TIMEOUT: int = 120
+    ENABLE_QUERY_CACHE: bool = True
     
     model_config = SettingsConfigDict(
         env_file=".env",

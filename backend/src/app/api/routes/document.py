@@ -14,8 +14,8 @@ from app.services.document_service import DocumentService
 from app.services.document_db_service import DocumentDBService
 from app.services.chunk_service import ChunkService
 from app.services.chunk_db_service import ChunkDBService
-from app.embeddings.embedder import Embedder
-from app.services.retrieval_service import RetrievalService
+from app.embeddings.embedder import get_embedder
+from app.services.retrieval_service import get_retrieval_service
 from app.vectordb.chroma_service import ChromaService
 
 router = APIRouter()
@@ -23,8 +23,8 @@ document_service = DocumentService()
 document_db_service = DocumentDBService()
 chunk_service = ChunkService()
 chunk_db_service = ChunkDBService()
-embedder = Embedder()
-retrieval_service = RetrievalService()
+embedder = get_embedder()
+retrieval_service = get_retrieval_service()
 chroma_service = ChromaService()
 
 @router.post("/documents/upload")
