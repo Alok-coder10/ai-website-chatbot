@@ -10,7 +10,7 @@ class LLMProvider(ABC):
 
     
     @abstractmethod
-    async def stram_generate(self, prompt:str):
+    async def stream_generate(self, prompt:str):
         """
         Async generator.
         Yields small text chunks.

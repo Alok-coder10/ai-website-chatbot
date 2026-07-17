@@ -8,6 +8,8 @@ from app.core.logging import logger, setup_logging
 from app.core.exceptions import register_exception_handlers
 from app.core.middleware import log_requests
 
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -55,6 +57,7 @@ app.include_router(
     api_router,
     prefix=settings.api_v1_prefix,
 )
+
 
 # ----------------------------
 # Root Endpoint

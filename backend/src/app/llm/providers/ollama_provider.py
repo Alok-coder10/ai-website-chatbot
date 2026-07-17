@@ -36,7 +36,7 @@ class OllamaProvider(LLMProvider):
             return data["response"]
 
     
-    async def stram_generate(self, prompt: str):
+    async def stream_generate(self, prompt: str):
         payload = {
             "model": settings.OLLAMA_MODEL,
             "prompt": prompt,
