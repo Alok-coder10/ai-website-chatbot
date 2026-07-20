@@ -8,6 +8,9 @@ class PromptCache:
 
     def set(self, prompt: str, response: str):
         self.cache[prompt] = response
+    
+    def health_check(self) -> bool:
+        return True
 
 
 _prompt_cache = PromptCache()

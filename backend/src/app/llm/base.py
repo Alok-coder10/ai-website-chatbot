@@ -17,6 +17,11 @@ class LLMProvider(ABC):
         """
         pass
 
+
+    @abstractmethod
+    async def health_check(self) -> bool:
+        pass
+
     @property
     def last_usage(self) -> dict:
         return {

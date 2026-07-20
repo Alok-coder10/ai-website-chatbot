@@ -8,6 +8,9 @@ class ResponseCache:
 
     def set(self, key, value):
         self.cache[key] = value
+    
+    def health_check(self) -> bool:
+        return True
 
 
 _response_cache = None

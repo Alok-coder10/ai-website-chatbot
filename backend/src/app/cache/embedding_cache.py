@@ -10,6 +10,9 @@ class EmbeddingCache:
     def set(self, text: str, embedding):
         key = text.strip().lower()
         self.cache[key] = embedding
+    
+    def health_check(self) -> bool:
+        return True
 
 
 _cache = EmbeddingCache()

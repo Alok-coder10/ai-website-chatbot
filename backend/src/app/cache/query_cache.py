@@ -10,6 +10,9 @@ class QueryCache:
     def set(self, query: str, expanded: str):
         key = query.strip().lower()
         self.cache[key] = expanded
+    
+    def health_check(self) -> bool:
+        return True
 
 
 _cache = QueryCache()

@@ -104,3 +104,18 @@ class OllamaProvider(LLMProvider):
                     e, provider = self.provider_name
                 )
                 raise
+
+    
+    async def health_check(self) -> bool:
+        try:
+            async with httpx.AsyncClient(
+                timeout = 5
+            ) as client:
+                response = await client.get(
+                    f"{settings.OLLAMA_HOST}/api/tags"
+                )
+
+                return response.status_code == 200
+            
+        except Exception:
+            return False

@@ -43,8 +43,8 @@ class MetricsService:
     def add_memory_hit(self):
         self.conversation_stats["memory_hits"] += 1
 
-    def add_summery_hit(self):
-        self.conversation_stats["summery_hits"] += 1
+    def add_summary_hit(self):
+        self.conversation_stats["summary_hits"] += 1
 
     def add_prompt_size(self, size: int):
         self.conversation_stats["prompt_characters"] += size
@@ -78,7 +78,7 @@ class MetricsService:
         self.total_llm_time += elapsed
         return elapsed
 
-    def stats(self):
+    def get_stats(self):
         conversation = {
             "avg_conversation_turns": (
                 self.conversation_stats["conversation_turns"] /
@@ -184,7 +184,7 @@ class MetricsService:
             "prompt_tokens", 0
         )
         self.completion_tokens += usage.get(
-            "completion_usage", 0
+            "completion_tokens", 0
         )
         self.total_tokens += usage.get(
             "total_tokens", 0
@@ -236,13 +236,13 @@ class MetricsService:
             self.cache_stats[cache_name]["misses"] += 1
     
 
-_metrics = None
+_metrics_service = None
 
 
 def get_metrics_service():
-    global _metrics
+    global _metrics_service
 
-    if _metrics is None:
-        _metrics = MetricsService()
+    if _metrics_service is None:
+        _metrics_service = MetricsService()
 
-    return _metrics
+    return _metrics_service
