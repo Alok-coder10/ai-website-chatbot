@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3.2:3b"
     LLM_TIMEOUT: int = 120
     ENABLE_QUERY_CACHE: bool = True
+    DEBUG: bool = True
     
     model_config = SettingsConfigDict(
         env_file=".env",

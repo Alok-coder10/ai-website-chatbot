@@ -1,5 +1,6 @@
 from app.llm.factory import get_llm_provider
 from app.cache.prompt_cache import get_prompt_cache
+from app.core.logger import log_debug
 
 class SelfRAGService:
 
@@ -27,11 +28,17 @@ class SelfRAGService:
         cached = self.prompt_cache.get(prompt)
 
         if cached is not None:
-            print("SelfRAG Prompt Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "self_rag_prompt"
+            )
             evidence = cached
         
         else:
-            print("SelfRAG Propmt Cache MISS")
+            log_debug(
+                event = "cache_miss",
+                cache = "self_rag_prompt"
+            )
             evidence = await self.provider.generate(
                 prompt=prompt
             )

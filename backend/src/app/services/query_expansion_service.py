@@ -2,6 +2,7 @@ from app.llm.factory import get_llm_provider
 from app.cache.query_cache import get_query_cache
 from app.cache.prompt_cache import get_prompt_cache
 from app.services.metrics_service import get_metrics_service
+from app.core.logger import log_debug
 
 class QueryExpansionService:
 
@@ -35,10 +36,16 @@ class QueryExpansionService:
         )
 
         if qcached is not None:
-            print("Query Expansion Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "query_expansion"
+            )
             return qcached
         
-        print("Query Expansion Cache MISS")
+        log_debug(
+                event = "cache_miss",
+                cache = "query_expansion"
+            )
 
         pcached = self.prompt_cache.get(prompt)
 
@@ -48,12 +55,18 @@ class QueryExpansionService:
         )
 
         if pcached is not None:
-            print("Prompt Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "prompt"
+            )
             self.query_cache.set(query, pcached)
 
             return pcached
         
-        print("Prompt Cache MISS")
+        log_debug(
+                event = "cache_miss",
+                cache = "prompt"
+            )
 
         expanded = await self.provider.generate(
             prompt=prompt

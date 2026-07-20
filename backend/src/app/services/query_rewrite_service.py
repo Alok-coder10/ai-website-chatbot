@@ -1,5 +1,6 @@
 from app.llm.factory import get_llm_provider
 from app.cache.prompt_cache import get_prompt_cache
+from app.core.logger import log_debug
 
 class QueryRewriteService:
 
@@ -23,10 +24,16 @@ class QueryRewriteService:
         cached = self.prompt_cache.get(prompt)
 
         if cached is not None:
-            print("Rewrite Prompt Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "rewrite_prompt"
+            )
             return cached
         
-        print("Rewrite Prompt Cache MISS")
+        log_debug(
+                event = "cache_miss",
+                cache = "rewrite_prompt"
+            )
 
         result = await self.provider.generate(
             prompt=prompt

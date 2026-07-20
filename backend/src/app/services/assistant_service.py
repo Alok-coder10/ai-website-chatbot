@@ -14,6 +14,7 @@ from app.cache.response_cache import get_response_cache
 from app.services.response_validation_service import get_response_validation_service
 from app.services.response_repair_service import get_response_repair_service
 from app.services.metrics_service import get_metrics_service
+from app.core.logger import log_debug
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -241,7 +242,10 @@ class AssistantService:
         )
 
         if rcached is not None:
-            print("Response Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "response"
+            )
 
             await self.conversation_service.save_message(
                 db, conversation_id, "assistant", rcached
@@ -254,12 +258,18 @@ class AssistantService:
                 "cached_response": rcached
             }
         
-        print("Response Cache MISS")
+        log_debug(
+            event = "cache_miss",
+            cache = "response"
+        )
 
         rag_context, citations, query_embedding, decision = await self._retrieve_documents(
             db, message, category ,owner
         )
-        print("Self RAG Retry", decision)
+        log_debug(
+            event = "self_rag_retry",
+            decision = decision
+        )
         if decision == "NO":
             response = "I could not find this information in the retrieved documents"
             await self.conversation_service.save_message(
@@ -372,8 +382,11 @@ class AssistantService:
         self, db, message, category, owner
     ):
         expanded_query = await self.query_expansion.expand(message)
-        print("Original :", message)
-        print("Expanded :", expanded_query)
+        log_debug(
+            event = "query_expansion",
+            original = message,
+            expanded = expanded_query
+        )
         query_embedding = self.embedder.encode(message)
         
         rag_context, citations = await self.retrieve_context(
@@ -385,12 +398,18 @@ class AssistantService:
         )
         
         decision = await self.self_rag_service.evaluate(message, rag_context)
-        print("SELF RAG:", decision)
+        log_debug(
+            event = "self_rag",
+            decision = decision
+        )
         
         if decision == "NO":
             new_query = await self.query_rewrite.rewrite(message)
             query_embedding = self.embedder.encode(new_query)
-            print("Retry Query:", new_query)
+            log_debug(
+                event = "query_rewrite",
+                rewritten = new_query
+            )
 
             rag_context, citations = await self.retrieve_context(
                 db = db,

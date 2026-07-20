@@ -11,6 +11,9 @@ from app.vectordb.chroma_service import ChromaService
 from app.cache.retrieval_cache import get_retrieval_cache
 from app.services.metrics_service import get_metrics_service
 
+from app.core.logger import (log_debug, log_info)
+from backend.src.app.cache import retrieval_cache
+
 class RetrievalService:
     def __init__(self):
         self.chunk_db_service = ChunkDBService()
@@ -64,14 +67,20 @@ class RetrievalService:
         
 
         if cached is not None:
-            print("Retrieval Cache HIT")
+            log_debug(
+                event = "cache_hit",
+                cache = "retrieval"
+            )
             elapsed = time.perf_counter() - hybrid_start
             self.metrics.add_retrieval_metrics(
                 "hybrid_time", elapsed
             )
             return cached
 
-        print("Retrieval Cache MISS")
+        log_debug(
+            event = "cache_miss",
+            cache = "retrieval"
+        )
 
 
         # -------------------------
@@ -121,6 +130,11 @@ class RetrievalService:
         elapsed = time.perf_counter() - hybrid_start
         self.metrics.add_retrieval_metrics(
             "hybrid_time", elapsed
+        )
+
+        log_info(
+            event = "hybrid_search",
+            retrieval_chunks = len(combined)
         )
         return combined
  
