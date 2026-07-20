@@ -1,6 +1,7 @@
 from app.llm.factory import get_llm_provider
 from app.cache.query_cache import get_query_cache
 from app.cache.prompt_cache import get_prompt_cache
+from app.services.metrics_service import get_metrics_service
 
 class QueryExpansionService:
 
@@ -8,6 +9,7 @@ class QueryExpansionService:
         self.provider = get_llm_provider()
         self.query_cache = get_query_cache()
         self.prompt_cache = get_prompt_cache()
+        self.metrics = get_metrics_service()
 
     async def expand(self, query: str) -> str:
         prompt = f"""
@@ -27,6 +29,10 @@ class QueryExpansionService:
         """
 
         qcached = self.query_cache.get(query)
+        self.metrics.cache_access(
+            "query_expansion_cache",
+            qcached is not None
+        )
 
         if qcached is not None:
             print("Query Expansion Cache HIT")
@@ -35,6 +41,11 @@ class QueryExpansionService:
         print("Query Expansion Cache MISS")
 
         pcached = self.prompt_cache.get(prompt)
+
+        self.metrics.cache_access(
+            "prompt_cache",
+            pcached is not None
+        )
 
         if pcached is not None:
             print("Prompt Cache HIT")

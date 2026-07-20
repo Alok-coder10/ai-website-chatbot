@@ -1,4 +1,5 @@
 from locale import normalize
+import time
 from app.services.conversation_service import ConversationService
 from app.services.summary_service import SummaryService
 from app.services.memory_service import MemoryService
@@ -12,6 +13,7 @@ from app.services.query_rewrite_service import get_query_rewrite_service
 from app.cache.response_cache import get_response_cache
 from app.services.response_validation_service import get_response_validation_service
 from app.services.response_repair_service import get_response_repair_service
+from app.services.metrics_service import get_metrics_service
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -30,11 +32,13 @@ class AssistantService:
         self.response_cache = get_response_cache()
         self.response_validator = get_response_validation_service()
         self.response_repair = get_response_repair_service()
+        self.metrics = get_metrics_service()
     
 
     async def chat(
         self, db, message, conversation_id = None, category = None, owner = None
     ):
+        request_timer = self.metrics.request_started()
         result = await self.build_prompt(
             db = db,
             message = message,
@@ -48,10 +52,24 @@ class AssistantService:
                 "response": result["cached_response"]
             }
 
+        provider_name = self.provider.__class__.__name__
+        provider_timer = self.metrics.provider_started(provider_name)
+
+        llm_timer = self.metrics.llm_started()
         response = (
             await self.provider.generate(
                 prompt = result["prompt"]
             )
+        )
+        llm_elapsed = self.metrics.llm_finished(llm_timer)
+        print(f"LLM Time: {llm_elapsed:.3f}s")
+
+        self.metrics.provider_finished(
+            provider_name, provider_timer
+        )
+        
+        self.metrics.add_token_usage(
+            self.provider.last_usage
         )
 
         validation = await self.response_validator.validate(
@@ -98,7 +116,8 @@ class AssistantService:
             rcache_key, response
         )
 
-
+        elapsed = self.metrics.request_finished(request_timer)
+        print(f"Request completed in {elapsed:.3f}s")
         return {
             "conversation_id": result["conversation_id"],
             "response": response
@@ -108,6 +127,7 @@ class AssistantService:
     async def chat_stream(
         self, db, message, conversation_id=None, category=None, owner=None
     ):
+        request_timer = self.metrics.request_started()
 
         result = await self.build_prompt(
             db = db,
@@ -120,12 +140,26 @@ class AssistantService:
             yield result["cached_response"]
             return
         chunks = []
+        provider_name = self.provider.__class__.__name__
+        provider_timer = self.metrics.provider_started(provider_name)
+
+        llm_timer = self.metrics.llm_started()
         async for c in self.provider.stream_generate(
             prompt = result["prompt"]
         ):
             chunks.append(c)
             yield c
         
+        llm_elapsed = self.metrics.llm_finished(llm_timer)
+        print(f"Streaming LLM Time: {llm_elapsed:.3f}s")
+
+        self.metrics.add_token_usage(
+            self.provider.last_usage
+        ) 
+        self.metrics.provider_finished(
+            provider_name, provider_timer
+        )
+
         response = "".join(chunks)
 
         citation_text = ""
@@ -156,6 +190,9 @@ class AssistantService:
 
         if result["citations"] and found_answer:
             yield citation_text
+        
+        elapsed = self.metrics.request_finished(request_timer)
+        print(f"Streaming request completed in {elapsed:.3f}s")
 
         
     
@@ -183,9 +220,14 @@ class AssistantService:
                 db, conversation_id
             )
         )
+        self.metrics.add_conversation_turns(len(messages))
+
         summary_text = await self._load_summary(
             db, conversation_id, messages
         )
+
+        if summary_text.strip():
+            self.metrics.add_summery_hit()
 ######################################################################
         rcache_key = (
             f"{category}|"
@@ -193,6 +235,10 @@ class AssistantService:
             f"{message.strip().lower()}"
         )
         rcached = self.response_cache.get(rcache_key)
+        self.metrics.cache_access(
+            "response_cache", 
+            rcached is not None
+        )
 
         if rcached is not None:
             print("Response Cache HIT")
@@ -230,6 +276,9 @@ class AssistantService:
         memory_text = await self._load_memories(
             db, conversation_id, query_embedding
         )
+
+        if memory_text.strip():
+            self.metrics.add_memory_hit()
         
 ##########################################################################
         
@@ -280,6 +329,7 @@ class AssistantService:
         or decisions unless explicitly written.
         Answer conversationally.
         """
+        self.metrics.add_prompt_size(len(prompt))
 
         return {
             "conversation_id": conversation_id,
@@ -494,8 +544,14 @@ class AssistantService:
         
         else:
             print("Running reranker")
+            start = time.perf_counter()
             reranked = self.reranker.rerank(
                 query, retrieved_chunks, top_k=3
+            )
+
+            elapsed = time.perf_counter() - start
+            self.metrics.add_retrieval_metrics(
+                "reranker_time", elapsed
             )
 
         rag_context = ""

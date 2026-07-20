@@ -16,3 +16,11 @@ class LLMProvider(ABC):
         Yields small text chunks.
         """
         pass
+
+    @property
+    def last_usage(self) -> dict:
+        return {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0
+        }
