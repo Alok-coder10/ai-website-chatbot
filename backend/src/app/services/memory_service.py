@@ -38,29 +38,29 @@ class MemoryService:
         return result.scalars().all()
 
     
-    def cosine_similarity(self, a, b):
-        dot = sum(x*y for x, y in zip(a,b))
-        norm_a = math.sqrt(
-            sum(
-                x*x for x in a
-            )
-        )
-        norm_b = math.sqrt(
-            sum(
-                x*x for x in b
-            )
-        )
+    # def cosine_similarity(self, a, b):
+    #     dot = sum(x*y for x, y in zip(a,b))
+    #     norm_a = math.sqrt(
+    #         sum(
+    #             x*x for x in a
+    #         )
+    #     )
+    #     norm_b = math.sqrt(
+    #         sum(
+    #             x*x for x in b
+    #         )
+    #     )
 
-        if norm_a == 0 or norm_b == 0:
-            return 0
+    #     if norm_a == 0 or norm_b == 0:
+    #         return 0
         
-        return dot/(norm_a * norm_b)
+    #     return dot/(norm_a * norm_b)
 
-# def cosine_similarity(a,b):
-#     a=np.array(a)
-#     b=np.array(b)
+    def cosine_similarity(self,a,b):
+        a=np.array(a)
+        b=np.array(b)
 
-#     return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
+        return np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b))
     async def search(
         self, db, conversation_id, query_embedding, top_k=3, threshold=0.70
     ):

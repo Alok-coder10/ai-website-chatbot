@@ -1,26 +1,103 @@
-import json
+import asyncio
 import time
 import math
 
 from app.services.chunk_db_service import ChunkDBService
 from app.services.bm25_service import BM25Service
-from app.services.document_db_service import DocumentDBService
-from app.models import document
 from app.vectordb.chroma_service import ChromaService
 from app.cache.retrieval_cache import get_retrieval_cache
 from app.services.metrics_service import get_metrics_service
-
+from app.reranker import get_reranker
 from app.core.logger import (log_debug, log_info)
-from app.cache.retrieval_cache import get_retrieval_cache
 
 class RetrievalService:
     def __init__(self):
         self.chunk_db_service = ChunkDBService()
         self.bm25_service = BM25Service()
-        self.document_db_service = DocumentDBService()
         self.chroma_service = ChromaService()
         self.retrieval_cache = get_retrieval_cache()
         self.metrics = get_metrics_service()
+        self.reranker = get_reranker()
+
+
+    async def multi_query_search(
+        self, db, queries: list[str], query_embeddings: list[list[float]],
+        category: None, owner = None, top_k = 8
+    ):
+        where = None
+
+        if category and owner:
+            where = {
+                "$and": [
+                    {"category": category},
+                    {"owner": owner}
+                ]
+            }
+        elif category:
+            where = {
+                "category": category
+            }
+        elif owner:
+            where = {
+                "owner": owner
+            }
+        cache_key = (
+            f"multi|"
+            f"{category}|"
+            f"{owner}|"
+            f"{'|'.join(sorted(queries))}"
+        )
+        cached = self.retrieval_cache.get(cache_key)
+        self.metrics.cache_access(
+            "multi_query_retrieval_cache",
+            cached is not None
+        )
+
+        if cached is not None:
+            log_debug(
+                event = "cache_hit",
+                cache = "multi_query"
+            )
+            return cached
+
+        results = await self._retrieve_multiple(
+            db = db, query_embeddings= query_embeddings, top_k = 20, where = where
+        )
+        
+
+        merged = self._merge_results(results)
+        unique_chunks = self._remove_duplicates(merged)
+        start = time.perf_counter()
+        reranked = self.reranker.rerank(
+            query = queries[0],
+            chunks = unique_chunks,
+            top_k = top_k
+        )
+        elapsed = time.perf_counter() - start
+        self.metrics.add_retrieval_metrics(
+            "reranker_time", elapsed
+        )
+
+        self.metrics.add_retrieved_chunks(
+            len(reranked)
+        )
+
+        self.retrieval_cache.set(
+            cache_key, reranked
+        )
+
+        log_info(
+            event = "multi_query_search",
+            cache_hit = cached is not None,
+            generated_queries = len(queries),
+            retrieved_chunks = len(merged),
+            after_deduplication = len(unique_chunks),
+            final_chunks  =len(reranked)
+
+        )
+
+        return reranked
+
 
     
     async def hybrid_search(
@@ -85,7 +162,7 @@ class RetrievalService:
         # -------------------------
         # Semantic Search (Chroma)
         # -------------------------
-        semantic = await self.retrieve(
+        semantic = await self._retrieve(
             db=db,
             query_embedding=query_embedding,
             top_k=20,
@@ -139,7 +216,7 @@ class RetrievalService:
  
 
 
-    def cosine_similarity(self, a, b):
+    def _cosine_similarity(self, a, b):
         dot = sum(x*y for x, y in zip(a,b))
         norm_a = math.sqrt(
             sum(
@@ -159,7 +236,7 @@ class RetrievalService:
 
 
 
-    async def retrieve(
+    async def _retrieve(
         self, db, query_embedding, top_k = 20, where = None
     ):   
         start = time.perf_counter()
@@ -178,12 +255,51 @@ class RetrievalService:
         
         ids = [int(i) for i in ids]
 
-        self.metrics.add_retrieval_metrics(len(ids))
+        self.metrics.add_retrieved_chunks(len(ids))
 
         return await self.chunk_db_service.get_chunks_by_ids(db, ids)
 
 
 
+    async def _retrieve_multiple(
+        self, db, query_embeddings: list[list[float]], top_k: int = 20, where=None
+    ):
+        tasks = [
+            self._retrieve(
+                db=db,
+                query_embedding=embedding,
+                top_k = top_k,
+                where = where
+            ) 
+            for embedding in query_embeddings
+        ]
+        results = await asyncio.gather(*tasks)
+
+        return results
+
+
+    def _merge_results(self, results: list[list]):
+        merged = []
+        for chunk in results:
+            merged.extend(chunk)
+        
+        return merged
+
+
+    def _remove_duplicates(self, chunks: list):
+        seen = set()
+        unique_chunks = []
+        for chunk in chunks:
+            if chunk.id in seen:
+                continue
+
+            seen.add(chunk.id)
+            unique_chunks.append(chunk)
+        
+        return unique_chunks
+
+    
+    
 
 _retrieval_service = None
 

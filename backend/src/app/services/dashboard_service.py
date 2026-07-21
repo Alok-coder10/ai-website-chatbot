@@ -1,6 +1,6 @@
 from httpx import request
 from app.services.metrics_service import get_metrics_service
-from backend.src.app.models import conversation
+from app.models.conversation import Conversation
 
 class DashboardService:
     def __init__(self):

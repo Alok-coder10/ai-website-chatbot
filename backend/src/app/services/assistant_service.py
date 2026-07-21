@@ -1,15 +1,14 @@
-from locale import normalize
 import time
 from app.services.conversation_service import ConversationService
 from app.services.summary_service import SummaryService
 from app.services.memory_service import MemoryService
 from app.llm.factory import get_llm_provider
-from app.reranker import get_reranker
+
 from app.embeddings.embedder import get_embedder
 from app.services.retrieval_service import  get_retrieval_service
-from app.services.query_expansion_service import get_query_expansion_service
+from app.services.query_service import get_query_service
 from app.services.self_rag_service import get_self_rag_service
-from app.services.query_rewrite_service import get_query_rewrite_service
+
 from app.cache.response_cache import get_response_cache
 from app.services.response_validation_service import get_response_validation_service
 from app.services.response_repair_service import get_response_repair_service
@@ -26,10 +25,8 @@ class AssistantService:
         self.memory_service = MemoryService()
         self.embedder = get_embedder()
         self.retrieval = get_retrieval_service()
-        self.reranker = get_reranker()
-        self.query_expansion = get_query_expansion_service()
+        self.query_service = get_query_service()
         self.self_rag_service = get_self_rag_service()
-        self.query_rewrite = get_query_rewrite_service()
         self.response_cache = get_response_cache()
         self.response_validator = get_response_validation_service()
         self.response_repair = get_response_repair_service()
@@ -228,7 +225,7 @@ class AssistantService:
         )
 
         if summary_text.strip():
-            self.metrics.add_summery_hit()
+            self.metrics.add_summary_hit()
 ######################################################################
         rcache_key = (
             f"{category}|"
@@ -254,6 +251,7 @@ class AssistantService:
             return {
                 "conversation_id": conversation_id,
                 "prompt": None,
+                "rag_context": None,
                 "citations": None,
                 "cached_response": rcached
             }
@@ -278,6 +276,7 @@ class AssistantService:
             return {
                 "conversation_id": conversation_id,
                 "prompt": None,
+                "rag_context":rag_context,
                 "citations": None,
                 "cached_response": rcached
             }
@@ -354,9 +353,9 @@ class AssistantService:
         recent = (messages[-self.MAX_HISTORY:])
         context = ""
         for m in recent:
-            context = "\n".join(
+            context += (
                 f"{m.role}:"
-                f"{m.content}"
+                f"{m.content}\n"
             )
         return context
 
@@ -381,50 +380,59 @@ class AssistantService:
     async def _retrieve_documents(
         self, db, message, category, owner
     ):
-        expanded_query = await self.query_expansion.expand(message)
+        expanded_query = await self.query_service.expand(message)
         log_debug(
             event = "query_expansion",
             original = message,
             expanded = expanded_query
         )
-        query_embedding = self.embedder.encode(message)
+        multi_queries = await self.query_service.generate_multi_queries(expanded_query)
+        query_embeddings = self.embedder.encode_batch(multi_queries)
+        query_embedding = query_embeddings[0]
         
         rag_context, citations = await self.retrieve_context(
             db = db,
             query = expanded_query,
+            queries = multi_queries,
+            embeddings = query_embeddings,
             embedding= query_embedding,
             category = category,
             owner=owner
         )
         
-        decision = await self.self_rag_service.evaluate(message, rag_context)
+        self_rag_decision = await self.self_rag_service.evaluate(message, rag_context)
         log_debug(
             event = "self_rag",
-            decision = decision
+            decision = self_rag_decision
         )
         
-        if decision == "NO":
-            new_query = await self.query_rewrite.rewrite(message)
-            query_embedding = self.embedder.encode(new_query)
+        if self_rag_decision == "NO":
+            new_query = await self.query_service.rewrite(message)
             log_debug(
                 event = "query_rewrite",
                 rewritten = new_query
             )
+            
+            multi_queries = await self.query_service.generate_multi_queries(new_query)
+            query_embedding = self.embedder.encode_batch(multi_queries)
+            
 
             rag_context, citations = await self.retrieve_context(
                 db = db,
                 query = new_query,
+                queries= multi_queries,
+                embeddings=query_embeddings,
                 embedding= query_embedding,
                 category = category,
                 owner=owner
             )
-            decision = await self.self_rag_service.evaluate(message, rag_context)
+            self_rag_decision = await self.self_rag_service.evaluate(message, rag_context)
 
         return (
                 rag_context,
                 citations,
                 query_embedding,
-                decision,
+                self_rag_decision,
         )
 
 
@@ -546,32 +554,18 @@ class AssistantService:
 
 
     async def retrieve_context(
-        self, db, query, embedding, category = None, owner = None
+        self, db, query, queries, embeddings, embedding, category = None, owner = None
     ):
-        retrieved_chunks = await self.retrieval.hybrid_search(
+        retrieved_chunks = await self.retrieval.multi_query_search(
             db = db,
-            query = query,
-            query_embedding=embedding, 
+            queries = queries,
+            query_embeddings=embeddings, 
             category = category,
             owner = owner,
             top_k = 15
         )
 
-        if len(retrieved_chunks) <= 5:
-            print("Skipping reranker")
-            reranked = retrieved_chunks[:3]
-        
-        else:
-            print("Running reranker")
-            start = time.perf_counter()
-            reranked = self.reranker.rerank(
-                query, retrieved_chunks, top_k=3
-            )
-
-            elapsed = time.perf_counter() - start
-            self.metrics.add_retrieval_metrics(
-                "reranker_time", elapsed
-            )
+        reranked = retrieved_chunks
 
         rag_context = ""
         citations = []
