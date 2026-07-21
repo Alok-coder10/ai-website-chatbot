@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from backend.src.app.services import database_health_service
+
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.runtime import START_TIME
@@ -14,9 +14,21 @@ from app.cache.response_cache import get_response_cache
 from app.cache.retrieval_cache import get_retrieval_cache
 from app.db.session import get_db
 from app.services.database_health_service import get_database_health_service
-
+from app.services.dashboard_service import get_dashboard_service
+from app.schemas.dashboard import DashboardResponse
 
 router = APIRouter(tags=["Health"])
+
+
+@router.get(
+    "/dashboard",
+    response_model = DashboardResponse
+)
+async def dashboard():
+    service = get_dashboard_service()
+    return service.get_dashboard()
+
+
 
 @router.get(
     "/ready",

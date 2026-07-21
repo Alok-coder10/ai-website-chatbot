@@ -1,4 +1,3 @@
-
 import json
 import time
 import math
@@ -12,7 +11,7 @@ from app.cache.retrieval_cache import get_retrieval_cache
 from app.services.metrics_service import get_metrics_service
 
 from app.core.logger import (log_debug, log_info)
-from backend.src.app.cache import retrieval_cache
+from app.cache.retrieval_cache import get_retrieval_cache
 
 class RetrievalService:
     def __init__(self):
