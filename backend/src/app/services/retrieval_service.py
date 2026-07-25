@@ -7,6 +7,8 @@ from app.services.bm25_service import BM25Service
 from app.vectordb.chroma_service import ChromaService
 from app.cache.retrieval_cache import get_retrieval_cache
 from app.services.metrics_service import get_metrics_service
+from app.services.parent_document_service import ParentDocumentService
+from app.services.parent_document_db_service import ParentDocumentDBService
 from app.reranker import get_reranker
 from app.core.logger import (log_debug, log_info)
 
@@ -18,6 +20,8 @@ class RetrievalService:
         self.retrieval_cache = get_retrieval_cache()
         self.metrics = get_metrics_service()
         self.reranker = get_reranker()
+        self.parent_document_service = ParentDocumentService()
+        self.parent_db_service = ParentDocumentDBService()
 
 
     async def multi_query_search(
@@ -25,7 +29,6 @@ class RetrievalService:
         category: None, owner = None, top_k = 8
     ):
         where = None
-
         if category and owner:
             where = {
                 "$and": [
@@ -61,7 +64,7 @@ class RetrievalService:
             return cached
 
         results = await self._retrieve_multiple(
-            db = db, query_embeddings= query_embeddings, top_k = 20, where = where
+            db = db, query_embeddings= query_embeddings, top_k = 8, where = where
         )
         
 
@@ -237,7 +240,7 @@ class RetrievalService:
 
 
     async def _retrieve(
-        self, db, query_embedding, top_k = 20, where = None
+        self, db, query_embedding, top_k = 8, where = None
     ):   
         start = time.perf_counter()
         ids = self.chroma_service.search(
@@ -262,7 +265,7 @@ class RetrievalService:
 
 
     async def _retrieve_multiple(
-        self, db, query_embeddings: list[list[float]], top_k: int = 20, where=None
+        self, db, query_embeddings: list[list[float]], top_k: int = 8, where=None
     ):
         tasks = [
             self._retrieve(
@@ -298,6 +301,40 @@ class RetrievalService:
         
         return unique_chunks
 
+
+
+    async def build_parent_context(self, db, retrieved_chunks):
+        parent_ids = []
+        seen = set()
+
+        for chunk in retrieved_chunks:
+            if(
+                chunk.parent_document_id is not None
+                and chunk.parent_document_id not in seen
+            ):
+                seen.add(chunk.parent_document_id)
+                parent_ids.append(chunk.parent_document_id)
+
+        if not parent_ids:
+            return "", []
+
+        parents = await self.parent_db_service.get_by_ids(db, parent_ids)
+
+        rag_context = ""
+        citations = []
+
+        for parent in parents:
+            rag_context += (
+                f"Source: {parent.document.filename}\n"
+                f"{parent.text}\n\n"
+            )
+        
+        for chunk in retrieved_chunks:
+            citations.append(
+                f"{chunk.source_name}(chunk {chunk.chunk_index})"
+            )
+
+        return rag_context, citations
     
     
 

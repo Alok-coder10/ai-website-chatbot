@@ -5,10 +5,11 @@ from app.models.chunk import Chunk
 
 class ChunkDBService:
     async def save(
-        self, db, document_id, source_name, chunk_index, content, embedding
+        self, db, document_id, parent_document_id, source_name, chunk_index, content, embedding
     ):
         chunk = Chunk(
             document_id = document_id,
+            parent_document_id = parent_document_id,
             source_name = source_name,
             chunk_index = chunk_index,
             content = content,

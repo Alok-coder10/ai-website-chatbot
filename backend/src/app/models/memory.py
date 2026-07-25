@@ -4,9 +4,9 @@ from sqlalchemy import (
     Text,
     ForeignKey
 )
-from app.models.conversation import Base
+from app.models.base import Base, TimestampMixin
 
-class Memory(Base):
+class Memory(Base, TimestampMixin):
     __tablename__ = "memories"
     id = Column(Integer, primary_key=True)
     conversation_id = Column(

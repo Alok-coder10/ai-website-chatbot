@@ -1,7 +1,7 @@
 from app.embeddings.model_loader import get_model
 from app.cache.embedding_cache import get_embedding_cache
 from app.core.config import settings
-from app.core.logger import log_debug
+from app.core.logger import log_debug, log_info
 
 
 class Embedder:
@@ -10,8 +10,11 @@ class Embedder:
         self.cache = get_embedding_cache()
 
     def encode(self, text:str):
-        print(f"Encodeing: {text}")
-
+        log_info(
+            event="Encoding text:",
+            result = text
+        )
+        
         if settings.ENABLE_QUERY_CACHE:
             cached = self.cache.get(text)
             if cached is not None:

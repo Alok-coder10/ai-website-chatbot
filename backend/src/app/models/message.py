@@ -7,7 +7,7 @@ from sqlalchemy.orm import(
     mapped_column,
     relationship,
 )
-from app.models.conversation import (
+from app.models.base import (
     Base,
     TimestampMixin
 )

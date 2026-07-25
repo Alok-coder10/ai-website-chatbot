@@ -15,18 +15,20 @@ class QueryService:
     
     async def generate_multi_queries(self, query: str) -> list[str]:
         prompt = f"""
-        Generate five different search queries for the following user question.
+        You are generating semantic retrieval queries for a RAG system.
+        Rewrite the user's question into FIVE alternative search queries.
 
         Rules:
-        - Preserve the original meaning.
-        - Each query should use different wording.
-        - Cover different search intents.
-        - Return one query per line.
+        - Keep the SAME intent.
+        - Do NOT broaden the topic.
+        - Do NOT introduce unrelated concepts.
+        - Do NOT change the domain.
+        - Each query should help retrieve different passages from the same document.
+        - Return ONLY one query per line.
         - No numbering.
-        - No bullet points.
         - No explanations.
 
-        Question:
+        User Question:
         {query}
         """
         cache_key = f"multi::{query}"

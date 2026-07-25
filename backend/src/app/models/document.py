@@ -6,9 +6,11 @@ from sqlalchemy import(
     DateTime,
 )
 from datetime import datetime
-from app.models.conversation import Base
 
-class Document(Base):
+from sqlalchemy.orm import relationship
+from app.models.base import Base, TimestampMixin
+
+class Document(Base, TimestampMixin):
     __tablename__ = "documents"
     id = Column(Integer, primary_key=True)
     filename = Column(String)
@@ -17,5 +19,15 @@ class Document(Base):
     owner = Column(String)
     tags = Column(Text)
     created_at = Column(DateTime, default=datetime.now)
+    parents = relationship(
+        "ParentDocument",
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )
+    chunks = relationship(
+        "Chunk",
+        back_populates="document",
+        cascade="all, delete-orphan"
+    )
 
 

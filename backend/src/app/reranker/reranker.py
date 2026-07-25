@@ -1,4 +1,5 @@
 from sentence_transformers import CrossEncoder
+from app.core.logger import log_info
 
 class Reranker:
     _model = None
@@ -25,11 +26,16 @@ class Reranker:
         ranked.sort(reverse=True, key= lambda x: x[0])
 
         for score, chunk in ranked[:5]:
-            print()
-            print(score)
-            print(chunk.source_name)
-            print(chunk.chunk_index)
-            print(chunk.content[:120])
-            print()
+            result = {
+                "source": chunk.source_name,
+                "chunk_index": chunk.chunk_index,
+                "score": float(score),
+                "preview": chunk.content[:120]
+            }
+
+            log_info(
+                event = "Reranking",
+                result = result
+            )
 
         return [x[1] for x in ranked[:top_k]]

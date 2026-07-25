@@ -562,22 +562,25 @@ class AssistantService:
             query_embeddings=embeddings, 
             category = category,
             owner = owner,
-            top_k = 15
+            top_k = 8
         )
 
-        reranked = retrieved_chunks
 
-        rag_context = ""
-        citations = []
+        # rag_context = ""
+        # citations = []
 
-        for c in reranked:
-            rag_context += (
-                f"Source: {c.source_name}"
-                f"(chunk {c.chunk_index})\n"
-                f"{c.content}\n\n"
-            )
-            citations.append(
-                f"{c.source_name}(chunk {c.chunk_index})"
-            )
+        # for c in reranked:
+        #     rag_context += (
+        #         f"Source: {c.source_name}"
+        #         f"(chunk {c.chunk_index})\n"
+        #         f"{c.content}\n\n"
+        #     )
+        #     citations.append(
+        #         f"{c.source_name}(chunk {c.chunk_index})"
+        #     )
+
+        rag_context, citations = await self.retrieval.build_parent_context(
+            db, retrieved_chunks
+        )
         
         return rag_context, citations

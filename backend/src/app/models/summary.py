@@ -4,9 +4,9 @@ from sqlalchemy import (
     ForeignKey,
     Text
 )
-from app.models.conversation import Base
+from app.models.base import Base, TimestampMixin
 
-class Summary(Base):
+class Summary(Base, TimestampMixin):
     __tablename__ = "summaries"
     id = Column(Integer, primary_key=True)
 

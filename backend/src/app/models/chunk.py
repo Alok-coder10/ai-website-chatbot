@@ -5,9 +5,10 @@ from sqlalchemy import(
     ForeignKey,
     Text
 )
-from app.models.conversation import Base
+from sqlalchemy.orm import relationship
+from app.models.base import Base, TimestampMixin
 
-class Chunk(Base):
+class Chunk(Base, TimestampMixin):
     __tablename__ = "chunks"
     id = Column(Integer, primary_key=True)
     document_id = Column(Integer, ForeignKey( "documents.id"))
@@ -15,3 +16,18 @@ class Chunk(Base):
     chunk_index = Column(Integer)
     content = Column(Text)
     embedding = Column(Text)
+    parent_document_id = Column(
+        Integer, 
+        ForeignKey(
+            "parent_documents.id", ondelete="CASCADE"
+        ),
+        index = True
+    )
+    document = relationship(
+        "Document",
+        back_populates="chunks"
+    )
+    parent = relationship(
+        "ParentDocument",
+        back_populates=  "chunks"
+    )

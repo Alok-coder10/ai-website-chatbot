@@ -1,5 +1,4 @@
 import uuid
-from email import message
 from sqlalchemy.orm import(
     Mapped,
     mapped_column,
@@ -11,9 +10,6 @@ from app.models.base import(
     Base,
     TimestampMixin
 )
-
-# class Base(DeclarativeBase):
-#     pass
 
 class Conversation(Base, TimestampMixin):
     __tablename__ = "conversations"
