@@ -1,0 +1,77 @@
+from calendar import c
+import json
+from sqlalchemy import select
+from app.models.chunk import Chunk
+
+class ChunkDBService:
+    async def save(
+        self, db, document_id, parent_document_id, source_name, chunk_index, content, embedding
+    ):
+        chunk = Chunk(
+            document_id = document_id,
+            parent_document_id = parent_document_id,
+            source_name = source_name,
+            chunk_index = chunk_index,
+            content = content,
+            embedding = json.dumps(embedding)
+        )
+
+        db.add(chunk)
+        await db.commit()
+        await db.refresh(chunk)
+
+        return chunk
+
+    
+    async def get_chunks(self, db, document_id):
+        result = await db.execute(
+            select(Chunk).where(
+                Chunk.document_id == document_id
+            )
+        )
+
+        return result.scalars().all()
+
+    async def get_all_chunks(self, db):
+        result = await db.execute(
+            select (Chunk)
+        )
+        return result.scalars().all()
+
+    
+
+    async def get_chunks_by_document_ids(
+        self, db, ids
+    ):
+        result = await db.execute(
+            select(Chunk).where(
+                Chunk.document_id.in_(ids)
+            )
+        )
+
+        return result.scalars().all()
+
+    
+    async def get_chunks_by_ids(
+        self, db, ids
+    ):
+        if not ids:
+            return []
+
+        ids = [int(i) for i in ids]
+
+        result = await db.execute(
+            select(Chunk).where(
+                Chunk.id.in_(ids)
+            )
+        )
+        chunks = result.scalars().all()
+
+        chunk_map = {
+            c.id : c for c in chunks
+        }
+
+        return [
+            chunk_map[i] for i in ids
+            if i in chunk_map
+        ]
