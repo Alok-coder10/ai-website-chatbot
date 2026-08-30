@@ -14,6 +14,9 @@ from app.services.response_validation_service import get_response_validation_ser
 from app.services.response_repair_service import get_response_repair_service
 from app.services.metrics_service import get_metrics_service
 from app.core.logger import log_debug
+from app.services.context_compression_service import get_context_compression_service
+from app.services.hyde_service import get_hyde_service
+from app.core.config import settings
 
 class AssistantService:
     MAX_HISTORY = 10
@@ -31,6 +34,8 @@ class AssistantService:
         self.response_validator = get_response_validation_service()
         self.response_repair = get_response_repair_service()
         self.metrics = get_metrics_service()
+        self.context_compression = get_context_compression_service()
+        self.hyde_service = get_hyde_service()
     
 
     async def chat(
@@ -193,7 +198,6 @@ class AssistantService:
         print(f"Streaming request completed in {elapsed:.3f}s")
 
         
-    
 
     async def build_prompt(
         self, db, message, conversation_id, category, owner
@@ -377,6 +381,21 @@ class AssistantService:
         return memory_text
 
 
+    async def _augment_with_hyde(self, query, multi_queries):
+        """
+        Generate one hypothetical-document "query" via HyDE and append it
+        to the multi-query set. It rides the existing multi_query_search
+        -> merge -> dedupe -> rerank pipeline, so it costs one extra LLM
+        call and one extra embedding, not a new retrieval path.
+        """
+        hypothetical = await self.hyde_service.generate(query)
+
+        if hypothetical and hypothetical not in multi_queries:
+            return multi_queries + [hypothetical]
+
+        return multi_queries
+
+
     async def _retrieve_documents(
         self, db, message, category, owner
     ):
@@ -387,6 +406,10 @@ class AssistantService:
             expanded = expanded_query
         )
         multi_queries = await self.query_service.generate_multi_queries(expanded_query)
+
+        if settings.ENABLE_HYDE:
+            multi_queries = await self._augment_with_hyde(expanded_query, multi_queries)
+
         query_embeddings = self.embedder.encode_batch(multi_queries)
         query_embedding = query_embeddings[0]
         
@@ -414,8 +437,12 @@ class AssistantService:
             )
             
             multi_queries = await self.query_service.generate_multi_queries(new_query)
-            query_embedding = self.embedder.encode_batch(multi_queries)
-            
+
+            if settings.ENABLE_HYDE:
+                multi_queries = await self._augment_with_hyde(new_query, multi_queries)
+
+            query_embeddings = self.embedder.encode_batch(multi_queries)
+            query_embedding = query_embeddings[0]
 
             rag_context, citations = await self.retrieve_context(
                 db = db,
@@ -581,6 +608,32 @@ class AssistantService:
 
         rag_context, citations = await self.retrieval.build_parent_context(
             db, retrieved_chunks
+        )
+
+        # ---------------------------------
+        # Context Compression
+        # ---------------------------------
+
+        contexts = [
+            context.strip()
+            for context in rag_context.split("\n\n")
+            if context.strip()
+        ]
+
+        compressed_contexts = self.context_compression.compress(contexts)
+
+        rag_context = "\n\n".join(compressed_contexts)
+
+        self.metrics.add_prompt_size(len(rag_context))
+
+        log_debug(
+            event="context_compression",
+            original_chars = sum(
+                len(context) for context in contexts
+            ),
+            compressed_chars = len(rag_context),
+            original_context = len(contexts),
+            compressed_contexts = len(compressed_contexts)
         )
         
         return rag_context, citations

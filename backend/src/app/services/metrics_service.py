@@ -25,6 +25,7 @@ class MetricsService:
             "bm25_time": 0.0,
             "reranker_time": 0.0,
             "hybrid_time": 0.0,
+            "hyde_time": 0.0,
             "retrieved_chunks": 0,
             "requests": 0,
         }
