@@ -1,5 +1,4 @@
 from functools import lru_cache
-from tkinter import E
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -19,6 +18,7 @@ class Settings(BaseSettings):
     LLM_TIMEOUT: int = 120
     ENABLE_QUERY_CACHE: bool = True
     ENABLE_HYDE: bool = True
+    ENABLE_ADAPTIVE_RAG: bool = True
     DEBUG: bool = True
     
     model_config = SettingsConfigDict(
