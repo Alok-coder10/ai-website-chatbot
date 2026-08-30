@@ -23,6 +23,7 @@ from app.services.adaptive_rag_service import (
     COMPLEX,
 )
 from app.services.citation_verification_service import get_citation_verification_service
+from app.services.grounding_service import get_answer_grounding_service
 from app.core.config import settings
 
 class AssistantService:
@@ -45,6 +46,7 @@ class AssistantService:
         self.hyde_service = get_hyde_service()
         self.adaptive_rag = get_adaptive_rag_service()
         self.citation_verifier = get_citation_verification_service()
+        self.grounding_service = get_answer_grounding_service()
     
 
     async def chat(
@@ -84,23 +86,28 @@ class AssistantService:
             self.provider.last_usage
         )
 
-        validation = await self.response_validator.validate(
-            question = message,
-            context = result["rag_context"],
-            answer = response
-        )
-        print("\nValidation Report")
-        print(validation["report"])
-
-        if not validation["supported"]:
-            print("Repairing response...")
-            response = await self.response_repair.repair(
-                question=message,
-                context=result["rag_context"],
-                answer=response,
-                validation_report=validation["report"]
+        if settings.ENABLE_ANSWER_GROUNDING and result.get("route") != NO_RETRIEVAL:
+            grounding = await self.grounding_service.evaluate(
+                question = message,
+                context = result["rag_context"],
+                answer = response
             )
-            
+            print("\nGrounding Report")
+            print(grounding["report"])
+
+            self.metrics.add_grounding_stats(
+                len(grounding["sentences"]),
+                len(grounding["sentences"]) - len(grounding["ungrounded_sentences"])
+            )
+
+            if not grounding["supported"]:
+                print("Repairing response...")
+                response = await self.response_repair.repair(
+                    question=message,
+                    context=result["rag_context"],
+                    answer=response,
+                    validation_report=grounding["report"]
+                )
 
         citation_check = self.citation_verifier.verify(
             response, result["citations"]
@@ -187,6 +194,28 @@ class AssistantService:
         )
 
         response = "".join(chunks)
+
+        if settings.ENABLE_ANSWER_GROUNDING and result.get("route") != NO_RETRIEVAL:
+            grounding = await self.grounding_service.evaluate(
+                question = message,
+                context = result["rag_context"],
+                answer = response
+            )
+            self.metrics.add_grounding_stats(
+                len(grounding["sentences"]),
+                len(grounding["sentences"]) - len(grounding["ungrounded_sentences"])
+            )
+            if not grounding["supported"]:
+                log_debug(
+                    event = "answer_grounding_ungrounded_stream",
+                    count = len(grounding["ungrounded_sentences"]),
+                )
+                # Same constraint as citation verification: the tokens
+                # are already streamed. We only clean the persisted/
+                # cached copy, we can't retract what was already sent.
+                response = self.grounding_service.strip_ungrounded(
+                    response, grounding["ungrounded_sentences"]
+                )
 
         citation_check = self.citation_verifier.verify(
             response, result["citations"]
@@ -417,7 +446,8 @@ class AssistantService:
             "prompt": prompt,
             "rag_context": rag_context,
             "citations": citations,
-            "cached_response": None
+            "cached_response": None,
+            "route": route
         }
     
     

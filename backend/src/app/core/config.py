@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     ENABLE_QUERY_CACHE: bool = True
     ENABLE_HYDE: bool = True
     ENABLE_ADAPTIVE_RAG: bool = True
+    ENABLE_ANSWER_GROUNDING: bool = True
     DEBUG: bool = True
     
     model_config = SettingsConfigDict(

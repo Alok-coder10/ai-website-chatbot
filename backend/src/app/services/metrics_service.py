@@ -26,6 +26,7 @@ class MetricsService:
             "reranker_time": 0.0,
             "hybrid_time": 0.0,
             "hyde_time": 0.0,
+            "grounding_time": 0.0,
             "retrieved_chunks": 0,
             "requests": 0,
         }
@@ -42,6 +43,13 @@ class MetricsService:
             "total_citations": 0,
             "verified_citations": 0,
             "hallucinated_citations": 0,
+            "requests": 0,
+        }
+
+        self.grounding_stats = {
+            "total_sentences": 0,
+            "grounded_sentences": 0,
+            "ungrounded_sentences": 0,
             "requests": 0,
         }
 
@@ -72,6 +80,12 @@ class MetricsService:
         self.citation_stats["verified_citations"] += verified
         self.citation_stats["hallucinated_citations"] += (total - verified)
         self.citation_stats["requests"] += 1
+
+    def add_grounding_stats(self, total: int, grounded: int):
+        self.grounding_stats["total_sentences"] += total
+        self.grounding_stats["grounded_sentences"] += grounded
+        self.grounding_stats["ungrounded_sentences"] += (total - grounded)
+        self.grounding_stats["requests"] += 1
 
 
     def request_started(self):
@@ -200,7 +214,17 @@ class MetricsService:
             "caches": caches,
             "retrieval": retrieval,
             "conversation": conversation,
-            "citations": citations
+            "citations": citations,
+            "grounding": {
+                "total_sentences": self.grounding_stats["total_sentences"],
+                "grounded_sentences": self.grounding_stats["grounded_sentences"],
+                "ungrounded_sentences": self.grounding_stats["ungrounded_sentences"],
+                "hallucination_rate": (
+                    self.grounding_stats["ungrounded_sentences"] /
+                    self.grounding_stats["total_sentences"]
+                    if self.grounding_stats["total_sentences"] else 0
+                ),
+            }
         }
 
 
