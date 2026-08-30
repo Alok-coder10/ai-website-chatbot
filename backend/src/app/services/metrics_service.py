@@ -27,6 +27,8 @@ class MetricsService:
             "hybrid_time": 0.0,
             "hyde_time": 0.0,
             "grounding_time": 0.0,
+            "multi_vector_time": 0.0,
+            "multi_vector_time": 0.0,
             "retrieved_chunks": 0,
             "requests": 0,
         }
@@ -146,6 +148,11 @@ class MetricsService:
             ),
             "avg_chunks": (
                 self.retrieval_stats["retrieved_chunks"] /
+                self.retrieval_stats["requests"]
+                if self.retrieval_stats["requests"] else 0
+            ),
+            "avg_multi_vector_time": (
+                self.retrieval_stats["multi_vector_time"] /
                 self.retrieval_stats["requests"]
                 if self.retrieval_stats["requests"] else 0
             ),

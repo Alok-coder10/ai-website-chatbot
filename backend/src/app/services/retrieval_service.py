@@ -10,6 +10,7 @@ from app.services.metrics_service import get_metrics_service
 from app.services.parent_document_service import ParentDocumentService
 from app.services.parent_document_db_service import ParentDocumentDBService
 from app.reranker import get_reranker
+from app.core.config import settings
 from app.core.logger import (log_debug, log_info)
 
 class RetrievalService:
@@ -255,12 +256,25 @@ class RetrievalService:
 
         if not ids:
             return []
-        
-        ids = [int(i) for i in ids]
 
-        self.metrics.add_retrieved_chunks(len(ids))
+        # Multi-vector retrieval stores extra "view" embeddings (summary,
+        # hypothetical questions) alongside the raw chunk under ids like
+        # "123:summary" so a match on any view still resolves back to the
+        # ONE real chunk. Strip the view suffix and dedupe so a chunk that
+        # matches on two views (e.g. raw text AND its summary) doesn't
+        # come back twice.
+        seen = set()
+        chunk_ids = []
+        for raw_id in ids:
+            chunk_id = int(str(raw_id).split(":", 1)[0])
+            if chunk_id in seen:
+                continue
+            seen.add(chunk_id)
+            chunk_ids.append(chunk_id)
 
-        return await self.chunk_db_service.get_chunks_by_ids(db, ids)
+        self.metrics.add_retrieved_chunks(len(chunk_ids))
+
+        return await self.chunk_db_service.get_chunks_by_ids(db, chunk_ids)
 
 
 

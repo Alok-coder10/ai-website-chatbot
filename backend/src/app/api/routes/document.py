@@ -20,6 +20,8 @@ from app.vectordb.chroma_service import ChromaService
 from app.services.parent_document_db_service import ParentDocumentDBService
 from app.services.parent_split_service import get_parent_split_service
 from app.services.parent_document_service import ParentDocumentService
+from app.services.multi_vector_service import get_multi_vector_service
+from app.core.config import settings
 
 router = APIRouter()
 document_service = DocumentService()
@@ -32,6 +34,7 @@ chroma_service = ChromaService()
 parent_split_service = get_parent_split_service()
 parent_document_db_service = ParentDocumentDBService()
 parent_document_service = ParentDocumentService()
+multi_vector_service = get_multi_vector_service()
 
 @router.post("/documents/upload")
 async def upload_document(
@@ -95,6 +98,35 @@ async def upload_document(
                     "chunk_index": chunk_index
                 }
             )
+
+            if settings.ENABLE_MULTI_VECTOR:
+                views = await multi_vector_service.generate_views(child)
+                view_metadata = {
+                    "document_id": doc.id,
+                    "parent_document_id": parent.id,
+                    "filename": doc.filename,
+                    "category": category or "",
+                    "owner": owner or "",
+                    "chunk_index": chunk_index
+                }
+
+                if views["summary"]:
+                    chroma_service.add_chunk_view(
+                        chunk_id=chunk.id,
+                        view="summary",
+                        embedding=embedder.encode(views["summary"]),
+                        document=views["summary"],
+                        metadata=view_metadata
+                    )
+
+                if views["questions"]:
+                    chroma_service.add_chunk_view(
+                        chunk_id=chunk.id,
+                        view="questions",
+                        embedding=embedder.encode(views["questions"]),
+                        document=views["questions"],
+                        metadata=view_metadata
+                    )
 
             chunk_index +=1
 

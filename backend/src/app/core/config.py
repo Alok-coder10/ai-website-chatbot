@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ENABLE_HYDE: bool = True
     ENABLE_ADAPTIVE_RAG: bool = True
     ENABLE_ANSWER_GROUNDING: bool = True
+    ENABLE_MULTI_VECTOR: bool = True
     DEBUG: bool = True
     
     model_config = SettingsConfigDict(
