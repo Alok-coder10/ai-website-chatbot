@@ -38,6 +38,13 @@ class MetricsService:
             "requests": 0,
         }
 
+        self.citation_stats = {
+            "total_citations": 0,
+            "verified_citations": 0,
+            "hallucinated_citations": 0,
+            "requests": 0,
+        }
+
     def add_conversation_turns(self, count: int):
         self.conversation_stats["conversation_turns"] += count
     
@@ -59,6 +66,12 @@ class MetricsService:
     def add_retrieved_chunks(self, count: int):
         self.retrieval_stats["retrieved_chunks"] += count
         self.retrieval_stats["requests"] += 1
+
+    def add_citation_stats(self, total: int, verified: int):
+        self.citation_stats["total_citations"] += total
+        self.citation_stats["verified_citations"] += verified
+        self.citation_stats["hallucinated_citations"] += (total - verified)
+        self.citation_stats["requests"] += 1
 
 
     def request_started(self):
@@ -124,7 +137,6 @@ class MetricsService:
             ),
         }
 
-        
         caches = {}
         for name, data in self.cache_stats.items():
 
@@ -157,6 +169,17 @@ class MetricsService:
                 ),
             }
 
+        citations = {
+            "total_citations": self.citation_stats["total_citations"],
+            "verified_citations": self.citation_stats["verified_citations"],
+            "hallucinated_citations": self.citation_stats["hallucinated_citations"],
+            "hallucination_rate": (
+                self.citation_stats["hallucinated_citations"] /
+                self.citation_stats["total_citations"]
+                if self.citation_stats["total_citations"] else 0
+            ),
+        }
+
         return {
             "requests": self.total_requests,
             "llm_calls": self.total_llm_calls,
@@ -176,7 +199,8 @@ class MetricsService:
             "providers": providers,
             "caches": caches,
             "retrieval": retrieval,
-            "conversation": conversation
+            "conversation": conversation,
+            "citations": citations
         }
 
 

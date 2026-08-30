@@ -22,6 +22,7 @@ from app.services.adaptive_rag_service import (
     SIMPLE,
     COMPLEX,
 )
+from app.services.citation_verification_service import get_citation_verification_service
 from app.core.config import settings
 
 class AssistantService:
@@ -43,6 +44,7 @@ class AssistantService:
         self.context_compression = get_context_compression_service()
         self.hyde_service = get_hyde_service()
         self.adaptive_rag = get_adaptive_rag_service()
+        self.citation_verifier = get_citation_verification_service()
     
 
     async def chat(
@@ -99,6 +101,20 @@ class AssistantService:
                 validation_report=validation["report"]
             )
             
+
+        citation_check = self.citation_verifier.verify(
+            response, result["citations"]
+        )
+        response = citation_check["cleaned_answer"]
+        self.metrics.add_citation_stats(
+            citation_check["total"], citation_check["verified"]
+        )
+        if citation_check["hallucinated"]:
+            log_debug(
+                event = "citation_hallucination_stripped",
+                count = citation_check["hallucinated"],
+                markers = citation_check["hallucinated_citations"]
+            )
 
         citation_text = ""
         if result["citations"]:
@@ -171,6 +187,24 @@ class AssistantService:
         )
 
         response = "".join(chunks)
+
+        citation_check = self.citation_verifier.verify(
+            response, result["citations"]
+        )
+        self.metrics.add_citation_stats(
+            citation_check["total"], citation_check["verified"]
+        )
+        if citation_check["hallucinated"]:
+            log_debug(
+                event = "citation_hallucination_detected_stream",
+                count = citation_check["hallucinated"],
+                markers = citation_check["hallucinated_citations"]
+            )
+        # Note: tokens are already streamed to the client by this point,
+        # so a fabricated citation marker can't be un-sent mid-stream.
+        # We still use the cleaned text for what gets persisted/cached,
+        # so history and the response cache never contain fake sources.
+        response = citation_check["cleaned_answer"]
 
         citation_text = ""
         if result["citations"]:
@@ -291,7 +325,7 @@ class AssistantService:
                 "prompt": None,
                 "rag_context":rag_context,
                 "citations": None,
-                "cached_response": rcached
+                "cached_response": response
             }
 
 ####################################################################
