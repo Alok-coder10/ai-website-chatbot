@@ -153,6 +153,6 @@ async def search(
     db: AsyncSession = Depends(get_db)
 ):
     emb = embedder.encode(query)
-    chunks = await retrieval_service.retrieve(db, document_id, emb)
+    chunks = await retrieval_service._retrieve(db, document_id, emb)
 
     return [c.content for c in chunks]

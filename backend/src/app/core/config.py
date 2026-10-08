@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     ENABLE_ANSWER_GROUNDING: bool = True
     ENABLE_MULTI_VECTOR: bool = True
     DEBUG: bool = True
+    TAVILY_API_KEY: str = ""
     
     model_config = SettingsConfigDict(
         env_file=".env",
