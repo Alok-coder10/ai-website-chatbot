@@ -6,6 +6,17 @@ from app.agents.executor import (
     AgentExecutionResult,
     AgentStepResult,
 )
+from app.agents.coordinator import (
+    CoordinatedTask,
+    MultiAgentCoordinator,
+    MultiAgentExecutionResult,
+)
+from app.agents.reflection import (
+    ReflectionAgent,
+    ReflectionResult,
+)
+from app.agents.task_queue import TaskQueue, TaskRecord
+from app.agents.memory import AgentMemoryStore, AgentMemoryRecord
 
 __all__ = [
     "Tool",
@@ -14,4 +25,13 @@ __all__ = [
     "AgentExecutor",
     "AgentExecutionResult",
     "AgentStepResult",
+    "CoordinatedTask",
+    "MultiAgentCoordinator",
+    "MultiAgentExecutionResult",
+    "ReflectionAgent",
+    "ReflectionResult",
+    "TaskQueue",
+    "TaskRecord",
+    "AgentMemoryStore",
+    "AgentMemoryRecord",
 ]
