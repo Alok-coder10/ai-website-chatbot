@@ -8,3 +8,4 @@ from app.models.summary import Summary
 from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.parent_document import ParentDocument
+from app.models.assistant_config import AssistantConfig
