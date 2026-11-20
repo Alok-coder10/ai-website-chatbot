@@ -1,0 +1,47 @@
+# ===============================
+# Python
+# ===============================
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+backend/.venv/
+
+# Environment files
+.env
+backend/.env
+
+# Logs
+*.log
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checker / formatter
+.mypy_cache/
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (for future frontend)
+node_modules/
+frontend/node_modules/
+frontend/.next/
+dist/
+build/
+
+
+assistant.db
+*.db
+__pycache__/
+.pytest_cache/
