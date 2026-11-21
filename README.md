@@ -2,7 +2,7 @@
 
 An extensible, memory-aware AI website assistant built around a modular FastAPI backend, local LLM inference with Ollama, persistent conversation storage, and a Retrieval-Augmented Generation (RAG) pipeline. The project is being developed incrementally so that the initial chatbot can evolve into a tool-using agent and, where needed, a multi-agent system without requiring a complete rewrite.
 
-> **Documentation scope:** This README documents Phases 1–4 and adds a living **Phase 5 roadmap**. Phase 5.1 (Assistant Configuration API) is recorded as implemented in the project discussion, while its end-to-end verification is still marked pending because the supplied discussion ends with the instruction to run the five API checks. The embeddable website widget and other follow-up items remain planned until implementation and verification are recorded.
+> **Documentation scope:** This README documents Phases 1–4 and adds a living **Phase 5 roadmap**. Phase 5.1 (Assistant Configuration API) is recorded as implemented in the project, the embeddable website widget and other follow-up items remain planned until implementation and verification are recorded.
 
 ---
 
@@ -87,7 +87,7 @@ Implemented foundation work includes:
 - Database session dependency and persistence services.
 - Chat endpoint connected to the assistant service and Ollama.
 
-The development model used in the recorded implementation was `llama3.2:3b`. `qwen3:8b` was also tested locally. The selected model is configurable through environment variables.
+The development model used in the implementation is `llama3.2:3b`. `qwen3:8b` is also tested locally. The selected model is configurable through environment variables.
 
 ### Phase 2 — Conversation and Semantic Memory
 
@@ -154,7 +154,7 @@ The intended grounding rule is strict: cite only retrieved chunks, do not fabric
 
 #### Caching and performance work
 
-The conversation records the following optimization components:
+These are the optimization components:
 
 - Embedding cache with normalized text keys.
 - Singleton/shared embedder access.
@@ -171,7 +171,7 @@ Cache keys for retrieval/response operations need to include relevant metadata f
 
 Parent-document support was introduced as a retrieval architecture extension. The intended design is for the retrieval layer to expand retrieved child chunks to their parent documents and return a structured retrieval result. Parent-document retrieval should remain inside the retrieval subsystem rather than adding more document/vector-search responsibilities to `AssistantService`.
 
-The conversation also records a SQLite migration issue involving timestamp defaults when adding columns to existing tables. Treat the migration as an area requiring environment-specific verification rather than assuming every migration ran successfully.
+There was a SQLite migration issue involving timestamp defaults when adding columns to existing tables. Treat the migration as an area requiring environment-specific verification rather than assuming every migration ran successfully.
 
 #### RAG observability and operational support
 
@@ -191,13 +191,13 @@ The Phase 3 work also includes:
 - Monitoring/statistics endpoints.
 - A dashboard service that assembles request, provider, cache, retrieval, and conversation metrics.
 
-The conversation shows successful requests to `/api/v1/health`, `/api/v1/ready`, and `/api/v1/dashboard` during local verification.
+Requests to `/api/v1/health`, `/api/v1/ready`, and `/api/v1/dashboard`  were successful during local verification.
 
 ### Phase 4 — Agent and Tool Foundation
 
 Phase 4 begins extending the assistant beyond question answering by introducing tools that can be invoked by an agent workflow.
 
-The project structure and tool exports recorded in the conversation include:
+The project structure and tool include:
 
 - `CalculatorTool`
 - `WebSearchTool`
@@ -219,11 +219,11 @@ The Python execution tool is implemented as a conservative first version. Its do
 - Blocking imports and selected dangerous built-ins such as `eval`, `exec`, `compile`, `__import__`, and `open`.
 - Controlled execution errors.
 
-The tool is exported through the agents/tools package and has pytest coverage for basic execution, multiple output lines, and invalid Python syntax. The conversation records the tool tests as completed.
+The tool is exported through the agents/tools package and has pytest coverage for basic execution, multiple output lines, and invalid Python syntax. The tool tests are completed.
 
 **Important security limitation:** this subprocess-based implementation is not a production-grade security sandbox. The project discussion explicitly defers hardened isolation to a later Docker/container execution boundary. Do not expose arbitrary code execution to untrusted users in a production deployment based only on the current restrictions.
 
-> The original high-level roadmap describes multi-agent routing (for example, Sales, Support, HR, Documentation, and Billing specialists). The available implementation record through this README's scope confirms the tool foundation, but does not establish that a complete multi-agent orchestrator and all specialist agents have been finished. They are therefore not claimed as completed here.
+> The original high-level roadmap describes multi-agent routing (for example, Sales, Support, HR, Documentation, and Billing specialists). The available implementation through this README's scope confirms the tool foundation, but does not establish that a complete multi-agent orchestrator and all specialist agents have been finished. They are therefore not claimed as completed here.
 
 ---
 
@@ -231,7 +231,7 @@ The tool is exported through the agents/tools package and has pytest coverage fo
 
 ## Phase 5 Roadmap and Progress
 
-Phase 5 moves the backend toward a configurable assistant that can be deployed on a website. The earlier high-level project roadmap labels Phase 5 as the **Embeddable Widget**. The latest implementation notes in the project conversation first record **Phase 5.1 — Assistant Configuration API**. This section keeps those source-backed details together and leaves the remaining work as a checklist so progress can be updated as development continues.
+Phase 5 moves the backend toward a configurable assistant that can be deployed on a website. The earlier high-level project roadmap labels Phase 5 as the **Embeddable Widget**. The latest implementation is **Phase 5.1 — Assistant Configuration API**. This section keeps those source-backed details together and leaves the remaining work as a checklist so progress can be updated as development continues.
 
 ### Phase 5.1 — Assistant Configuration API
 
